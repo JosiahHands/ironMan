@@ -227,7 +227,7 @@ function startGame() {
     }`;
     howTo.style.display = "none";
     startButton.textContent = "▶ Play again";
-    screen.classList.add("is-on");
+    screen.classList.add("is-on", "is-report");
   }
 
   function loadBest() {

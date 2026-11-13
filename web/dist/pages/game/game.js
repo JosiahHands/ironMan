@@ -186,7 +186,7 @@ function startGame() {
         screenText.textContent = `You scored ${score.toLocaleString()} points and reached level ${level}. ${isRecord ? "That's your best ever!" : "Suit up and try again!"}`;
         howTo.style.display = "none";
         startButton.textContent = "▶ Play again";
-        screen.classList.add("is-on");
+        screen.classList.add("is-on", "is-report");
     }
     function loadBest() {
         try {
