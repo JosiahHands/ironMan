@@ -1,0 +1,8 @@
+{
+  "name": "ironman-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p ../web && node check-pages.ts"
+  }
+}

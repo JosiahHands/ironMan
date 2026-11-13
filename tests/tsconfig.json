@@ -1,0 +1,16 @@
+{
+  // Tests run directly with Node ("node tests/check-pages.ts"); this is only for type checking.
+  // Node's types are borrowed from tools/node_modules so they don't need installing twice.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "typeRoots": ["../tools/node_modules/@types"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true
+  },
+  "include": ["*.ts", "../tools/chrome.ts"]
+}

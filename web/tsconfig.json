@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    // Where the .ts files live and where the compiled .js files go
+    "rootDir": ".",
+    "outDir": "./dist",
+
+    // Browser settings: modern JavaScript plus the DOM types (document, window, etc.)
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022", "dom"],
+
+    // Type checking
+    "strict": true,
+
+    // Lets the browser dev tools show the original .ts code when debugging
+    "sourceMap": true,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["dist"]
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Noah's Armory</title>
+    <link rel="stylesheet" href="shared/shared.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="dist/shared/credits.js"></script>
+    <script defer src="dist/shared/shared.js"></script>
+    <script defer src="dist/script.js"></script>
+  </head>
+  <body class="landing">
+    <!-- slowly drifting circuit-board background -->
+    <div class="circuit-bg"></div>
+    <div class="glow-bg"></div>
+
+    <header class="topbar">
+      <a class="brand" href="index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
+      <nav class="topbar-links">
+        <a href="pages/home/home.html">Armory</a>
+        <a href="pages/game/game.html">Game</a>
+        <a class="btn btn-ghost topbar-cta" href="pages/home/home.html">Suit up</a>
+      </nav>
+    </header>
+
+    <main class="landing-main">
+      <p class="kicker" data-type="SYSTEM ONLINE // WELCOME BACK, NOAH"></p>
+      <h1 class="landing-title">
+        The world's most <span class="shine">powerful</span> armor is waiting.
+      </h1>
+
+      <!-- the spinning globe, with the enter button at its center -->
+      <div class="globe-stage">
+        <canvas id="globe"></canvas>
+        <a class="enter-button" id="enter-button" href="pages/home/home.html">
+          <span class="enter-ring"></span>
+          <span class="enter-label">ENTER<br />THE ARMORY</span>
+        </a>
+      </div>
+
+      <section class="stats">
+        <div class="stat" data-reveal style="--delay: 0s">
+          <strong><span data-count-to="85">0</span></strong>
+          <span>suits in the armory</span>
+        </div>
+        <div class="stat" data-reveal style="--delay: 0.15s">
+          <strong><span data-count-to="100">0</span>%</strong>
+          <span>repulsor power</span>
+        </div>
+        <div class="stat" data-reveal style="--delay: 0.3s">
+          <strong><span data-count-to="3000">0</span>+</strong>
+          <span>mph top speed</span>
+        </div>
+        <div class="stat" data-reveal style="--delay: 0.45s">
+          <strong>1</strong>
+          <span>pilot: Noah</span>
+        </div>
+      </section>
+    </main>
+
+    <div class="marquee">
+      <div class="marquee-track">
+        <span>MARK I</span><span>MARK II</span><span>MARK III</span><span>MARK V</span><span>MARK VII</span>
+        <span>MARK XLII</span><span>MARK L</span><span>MARK LXXXV</span><span>MARK NOAH</span>
+        <span>MARK I</span><span>MARK II</span><span>MARK III</span><span>MARK V</span><span>MARK VII</span>
+        <span>MARK XLII</span><span>MARK L</span><span>MARK LXXXV</span><span>MARK NOAH</span>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <p class="made-for">BUILT FOR NOAH <span class="heart">♥</span></p>
+      <details class="credits">
+        <summary>Photo &amp; video credits</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+    </footer>
+  </body>
+</html>

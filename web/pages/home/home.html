@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Noah's Armory | Home</title>
+    <link rel="stylesheet" href="../../shared/shared.css" />
+    <link rel="stylesheet" href="home.css" />
+    <script defer src="../../dist/shared/credits.js"></script>
+    <script defer src="../../dist/shared/shared.js"></script>
+    <script defer src="../../dist/pages/home/home.js"></script>
+  </head>
+  <body>
+    <!-- power bar at the very top that fills as you scroll -->
+    <div class="scroll-power"><div class="scroll-power-fill" id="scroll-power"></div></div>
+
+    <!-- ================= NAV ================= -->
+    <header class="nav" id="nav">
+      <a class="brand" href="../../index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
+      <nav class="nav-links">
+        <a href="#suits">Suits</a>
+        <a href="#reactor">Reactor</a>
+        <a href="#powers">Powers</a>
+        <a href="#history">History</a>
+        <a href="#lab">Lab</a>
+      </nav>
+      <a class="btn btn-red nav-play" href="../game/game.html">▶ Play game</a>
+    </header>
+
+    <!-- ================= HERO ================= -->
+    <section class="hero" id="top">
+      <video class="bg-video" src="../../media/videos/sparks.mp4" poster="../../media/videos/sparks.webp" autoplay muted loop playsinline></video>
+      <div class="hero-shade"></div>
+
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="kicker" data-type="J.A.R.V.I.S. ONLINE // HELLO, NOAH"></p>
+          <h1 class="hero-title">
+            <span class="split" data-split>SUIT UP,</span>
+            <span class="split gold" data-split>NOAH!</span>
+          </h1>
+          <p class="hero-sub">
+            Genius inventor. Flying armor. Repulsor blasts.
+            <strong>Click anywhere to fire your own!</strong>
+          </p>
+          <div class="hero-buttons">
+            <a class="btn btn-red" href="#suits">See the suits</a>
+            <a class="btn btn-ghost" href="../game/game.html">Play the game</a>
+          </div>
+        </div>
+
+        <div class="hero-art" id="hero-art">
+          <img src="../../media/images/repulsor-hand.webp" alt="Iron Man aiming a glowing repulsor hand" />
+          <span class="hud-corner tl"></span><span class="hud-corner tr"></span>
+          <span class="hud-corner bl"></span><span class="hud-corner br"></span>
+          <span class="scan-line"></span>
+          <span class="target-ring"></span>
+          <div class="hud-readout">
+            <span>TARGET LOCKED</span>
+            <span>REPULSOR <b id="hero-charge">100</b>%</span>
+          </div>
+        </div>
+      </div>
+
+      <a class="scroll-cue" href="#suits" aria-label="Scroll down"><span></span></a>
+    </section>
+
+    <div class="marquee">
+      <div class="marquee-track">
+        <span>REPULSORS ONLINE</span><span>FLIGHT SYSTEMS 100%</span><span>ARC REACTOR STABLE</span>
+        <span>HELMET HUD ACTIVE</span><span>PILOT: NOAH</span><span>READY FOR LAUNCH</span>
+        <span>REPULSORS ONLINE</span><span>FLIGHT SYSTEMS 100%</span><span>ARC REACTOR STABLE</span>
+        <span>HELMET HUD ACTIVE</span><span>PILOT: NOAH</span><span>READY FOR LAUNCH</span>
+      </div>
+    </div>
+
+    <!-- ================= SUITS ================= -->
+    <section class="section suits" id="suits">
+      <div class="section-head" data-reveal>
+        <p class="kicker">THE ARMORY</p>
+        <h2>Pick a suit. <span class="gold">Scan it.</span></h2>
+        <p class="section-sub">Move over a suit to inspect it. Click it to run a full scan!</p>
+      </div>
+
+      <div class="suit-grid">
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0s">
+          <img src="../../media/images/helmet-profile.webp" alt="Close-up of a red and gold Iron Man helmet" />
+          <div class="suit-info">
+            <span class="suit-mark">MARK III</span>
+            <h3>The Classic</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 85"></i>
+              <span>Speed</span><i style="--value: 80"></i>
+              <span>Armor</span><i style="--value: 75"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0.1s">
+          <img src="../../media/images/winged-suit.webp" alt="Red and gold armor with blades on its back" />
+          <div class="suit-info">
+            <span class="suit-mark">MARK L</span>
+            <h3>Nano Blades</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 95"></i>
+              <span>Speed</span><i style="--value: 92"></i>
+              <span>Armor</span><i style="--value: 90"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0.2s">
+          <img src="../../media/images/statue-blast.webp" alt="Iron Man statue raising a repulsor" />
+          <div class="suit-info">
+            <span class="suit-mark">MARK VII</span>
+            <h3>Heavy Hitter</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 98"></i>
+              <span>Speed</span><i style="--value: 74"></i>
+              <span>Armor</span><i style="--value: 96"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0s">
+          <img src="../../media/images/dark-gold-suit.webp" alt="Dark gold armor glowing in the shadows" />
+          <div class="suit-info">
+            <span class="suit-mark">STEALTH</span>
+            <h3>Shadow Gold</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 72"></i>
+              <span>Speed</span><i style="--value: 88"></i>
+              <span>Armor</span><i style="--value: 80"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0.1s">
+          <img src="../../media/images/led-suit.webp" alt="A suit covered in glowing red lights" />
+          <div class="suit-info">
+            <span class="suit-mark">MARK NEON</span>
+            <h3>Light Show</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 80"></i>
+              <span>Speed</span><i style="--value: 90"></i>
+              <span>Armor</span><i style="--value: 58"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+
+        <article class="suit-card" data-tilt data-clickable data-reveal style="--delay: 0.2s">
+          <img src="../../media/images/lego-battle.webp" alt="Toy brick Iron Man blasting a shield" />
+          <div class="suit-info">
+            <span class="suit-mark">MARK BRICK</span>
+            <h3>Brick Battle</h3>
+            <div class="suit-stats">
+              <span>Power</span><i style="--value: 60"></i>
+              <span>Speed</span><i style="--value: 45"></i>
+              <span>Armor</span><i style="--value: 100"></i>
+            </div>
+          </div>
+          <span class="scan-stamp">SCAN COMPLETE</span>
+        </article>
+      </div>
+    </section>
+
+    <!-- ================= ARC REACTOR ================= -->
+    <section class="section reactor-section" id="reactor">
+      <video class="bg-video" src="../../media/videos/turbine.mp4" poster="../../media/videos/turbine.webp" autoplay muted loop playsinline></video>
+      <div class="reactor-shade"></div>
+
+      <div class="reactor-layout">
+        <button class="reactor" id="reactor-button" aria-label="Charge the arc reactor">
+          <span class="ring ring-1"></span>
+          <span class="ring ring-2"></span>
+          <span class="ring ring-3"></span>
+          <span class="core"></span>
+        </button>
+
+        <div class="reactor-info" data-reveal="right">
+          <p class="kicker">POWER CORE</p>
+          <h2>Charge the <span class="gold">Arc Reactor</span></h2>
+          <p>Click the reactor as fast as you can! It loses power if you stop. Hit 100% for an <b>OVERLOAD</b>!</p>
+          <div class="power-bar"><div class="power-fill" id="reactor-fill"></div></div>
+          <p class="power-label"><span id="reactor-percent">0</span>% POWER</p>
+          <p class="reactor-message" id="reactor-message">&nbsp;</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= POWERS ================= -->
+    <section class="section powers" id="powers">
+      <div class="section-head" data-reveal>
+        <p class="kicker">SUIT SYSTEMS</p>
+        <h2>Super <span class="gold">powers</span></h2>
+        <p class="section-sub">Tap a card to flip it.</p>
+      </div>
+
+      <div class="power-grid">
+        <button class="flip-card" data-reveal style="--delay: 0s">
+          <span class="flip-inner">
+            <span class="flip-front" style="--image: url('../../media/images/toy-repulsor.webp')">
+              <span class="flip-title">Repulsors</span>
+              <span class="flip-hint">TAP TO FLIP</span>
+            </span>
+            <span class="flip-back">
+              <strong data-count-to="9000">0</strong>
+              <span class="flip-unit">blast power</span>
+              Energy blasts from the palms of the hands. They also help steer while flying!
+            </span>
+          </span>
+        </button>
+
+        <button class="flip-card" data-reveal style="--delay: 0.1s">
+          <span class="flip-inner">
+            <span class="flip-front" style="--image: url('../../media/videos/clouds.webp')">
+              <span class="flip-title">Flight</span>
+              <span class="flip-hint">TAP TO FLIP</span>
+            </span>
+            <span class="flip-back">
+              <strong data-count-to="3000">0</strong>
+              <span class="flip-unit">mph</span>
+              Jets in the boots and hands blast the suit above the clouds, faster than a fighter jet.
+            </span>
+          </span>
+        </button>
+
+        <button class="flip-card" data-reveal style="--delay: 0.2s">
+          <span class="flip-inner">
+            <span class="flip-front" style="--image: url('../../media/videos/turbine.webp')">
+              <span class="flip-title">Arc Reactor</span>
+              <span class="flip-hint">TAP TO FLIP</span>
+            </span>
+            <span class="flip-back">
+              <strong data-count-to="100">0</strong>
+              <span class="flip-unit">% power</span>
+              A glowing power core in the chest. It runs every system in the whole suit.
+            </span>
+          </span>
+        </button>
+
+        <button class="flip-card" data-reveal style="--delay: 0.3s">
+          <span class="flip-inner">
+            <span class="flip-front" style="--image: url('../../media/images/helmet-eyes.webp')">
+              <span class="flip-title">Smart Helmet</span>
+              <span class="flip-hint">TAP TO FLIP</span>
+            </span>
+            <span class="flip-back">
+              <strong data-count-to="360">0</strong>
+              <span class="flip-unit">degree view</span>
+              A heads-up display shows targets, maps and a talking computer helper.
+            </span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= HISTORY ================= -->
+    <section class="section history" id="history">
+      <div class="section-head" data-reveal>
+        <p class="kicker">ORIGIN FILES</p>
+        <h2>From comic book <span class="gold">to legend</span></h2>
+      </div>
+
+      <div class="history-layout">
+        <div class="history-art">
+          <img class="art-back" data-parallax="-0.08" src="../../media/images/graffiti.webp" alt="Giant Iron Man graffiti painted on a wall" />
+          <img class="art-front" data-parallax="0.1" src="../../media/images/comic-classic.webp" alt="A classic Iron Man comic book" />
+        </div>
+
+        <ol class="timeline" id="timeline">
+          <li data-reveal="right">
+            <span class="year">1963</span>
+            Iron Man flies into comic books for the very first time.
+          </li>
+          <li data-reveal="right">
+            <span class="year">The first suit</span>
+            It was big, clunky and <b>gray</b>, built from scrap parts in a cave!
+          </li>
+          <li data-reveal="right">
+            <span class="year">Same year</span>
+            The armor got its famous <b class="gold">red and gold</b> paint job.
+          </li>
+          <li data-reveal="right">
+            <span class="year">2008</span>
+            Iron Man blasts onto movie screens, and the world goes wild.
+          </li>
+          <li data-reveal="right">
+            <span class="year">Today</span>
+            A new pilot is training: <b class="gold">Noah</b>.
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ================= SUIT LAB ================= -->
+    <section class="section lab" id="lab">
+      <div class="section-head" data-reveal>
+        <p class="kicker">STARK LAB</p>
+        <h2>Design <span class="gold">your own</span> helmet</h2>
+        <p class="section-sub">Pick your colors, name your suit, or hit Random.</p>
+      </div>
+
+      <div class="lab-layout">
+        <div class="lab-preview" id="lab-preview" data-reveal="left">
+          <svg class="helmet" viewBox="0 0 200 240" aria-label="Your helmet design">
+            <defs>
+              <filter id="eye-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            <!-- outer shell -->
+            <path class="helmet-armor" d="M100 8 C152 8 182 50 182 108 C182 168 160 214 100 232 C40 214 18 168 18 108 C18 50 48 8 100 8 Z" />
+            <!-- side panels -->
+            <circle class="helmet-trim" cx="24" cy="118" r="13" />
+            <circle class="helmet-trim" cx="176" cy="118" r="13" />
+            <!-- shine on the shell -->
+            <path class="helmet-sheen" d="M66 26 C44 44 32 74 30 108 C40 80 54 56 80 36 Z" />
+            <!-- forehead stripe -->
+            <path class="helmet-trim" d="M86 10 L114 10 L110 58 L90 58 Z" />
+            <!-- face plate -->
+            <path class="helmet-trim" d="M100 58 C136 58 152 80 152 110 L146 168 L124 206 L76 206 L54 168 L48 110 C48 80 64 58 100 58 Z" />
+            <!-- cheek lines -->
+            <path class="helmet-line" d="M54 168 L80 150 M146 168 L120 150 M76 206 L84 180 L116 180 L124 206" />
+            <!-- eyes -->
+            <path class="helmet-eye" filter="url(#eye-glow)" d="M60 110 L94 118 L92 130 L66 125 Z" />
+            <path class="helmet-eye" filter="url(#eye-glow)" d="M140 110 L106 118 L108 130 L134 125 Z" />
+          </svg>
+          <p class="suit-name" id="suit-name-display">MARK NOAH-1</p>
+        </div>
+
+        <div class="lab-controls" data-reveal="right">
+          <label class="lab-label">Armor color</label>
+          <div class="swatches" data-part="armor">
+            <button style="--swatch: #d7261e" data-color="#d7261e" aria-label="Red"></button>
+            <button style="--swatch: #1f2430" data-color="#1f2430" aria-label="Black"></button>
+            <button style="--swatch: #b8c2cc" data-color="#b8c2cc" aria-label="Silver"></button>
+            <button style="--swatch: #1f5fd1" data-color="#1f5fd1" aria-label="Blue"></button>
+            <button style="--swatch: #18a34a" data-color="#18a34a" aria-label="Green"></button>
+            <button style="--swatch: #7b2ff7" data-color="#7b2ff7" aria-label="Purple"></button>
+          </div>
+
+          <label class="lab-label">Face plate</label>
+          <div class="swatches" data-part="trim">
+            <button style="--swatch: #ffc94a" data-color="#ffc94a" aria-label="Gold"></button>
+            <button style="--swatch: #e6ebf2" data-color="#e6ebf2" aria-label="White"></button>
+            <button style="--swatch: #d7261e" data-color="#d7261e" aria-label="Red"></button>
+            <button style="--swatch: #1f2430" data-color="#1f2430" aria-label="Black"></button>
+            <button style="--swatch: #ff8a00" data-color="#ff8a00" aria-label="Orange"></button>
+            <button style="--swatch: #5ee7ff" data-color="#5ee7ff" aria-label="Cyan"></button>
+          </div>
+
+          <label class="lab-label">Eye glow</label>
+          <div class="swatches" data-part="eyes">
+            <button style="--swatch: #e9fbff" data-color="#e9fbff" aria-label="White"></button>
+            <button style="--swatch: #5ee7ff" data-color="#5ee7ff" aria-label="Cyan"></button>
+            <button style="--swatch: #ff3b30" data-color="#ff3b30" aria-label="Red"></button>
+            <button style="--swatch: #3dff7a" data-color="#3dff7a" aria-label="Green"></button>
+            <button style="--swatch: #ffc94a" data-color="#ffc94a" aria-label="Gold"></button>
+            <button style="--swatch: #c77dff" data-color="#c77dff" aria-label="Purple"></button>
+          </div>
+
+          <label class="lab-label" for="suit-name">Suit name</label>
+          <input class="name-input" id="suit-name" maxlength="18" value="MARK NOAH-1" />
+
+          <button class="btn btn-ghost" id="random-suit">🎲 Random suit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LAUNCH ================= -->
+    <section class="launch" id="launch">
+      <video class="bg-video" src="../../media/videos/rocket.mp4" poster="../../media/videos/rocket.webp" autoplay muted loop playsinline></video>
+      <div class="launch-shade"></div>
+      <div class="launch-copy" data-reveal>
+        <p class="kicker">MISSION CONTROL</p>
+        <h2>Ready for your <span class="gold">first mission?</span></h2>
+        <button class="btn btn-red launch-button" id="launch-button">🚀 Launch the game</button>
+      </div>
+    </section>
+
+    <!-- countdown that appears when Launch is clicked -->
+    <div class="countdown" id="countdown"><span id="countdown-number">3</span></div>
+
+    <footer class="site-footer">
+      <p class="made-for">BUILT FOR NOAH <span class="heart">♥</span></p>
+      <details class="credits">
+        <summary>Photo &amp; video credits</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+    </footer>
+  </body>
+</html>

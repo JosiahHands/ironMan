@@ -1,0 +1,11 @@
+{
+  "name": "ironman-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

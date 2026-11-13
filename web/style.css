@@ -1,0 +1,296 @@
+/* =========================================================================
+   Landing page
+   Loosely inspired by Cloudflare's homepage: clean top bar, bold headline,
+   a spinning network globe and a row of big stats.
+   ========================================================================= */
+
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Background layers ---------- */
+
+.circuit-bg {
+  position: fixed;
+  inset: -10%;
+  background: url("media/images/circuit.webp") center / cover;
+  opacity: 0.22;
+  animation: circuit-drift 40s ease-in-out infinite alternate;
+  z-index: -2;
+}
+
+@keyframes circuit-drift {
+  to {
+    transform: translate(4%, -3%) scale(1.08);
+  }
+}
+
+.glow-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(215, 38, 30, 0.35), transparent 45%),
+    radial-gradient(circle at 50% 120%, rgba(255, 201, 74, 0.25), transparent 50%),
+    linear-gradient(180deg, rgba(5, 7, 15, 0.6), var(--bg) 95%);
+  z-index: -1;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--line);
+  background: rgba(5, 7, 15, 0.6);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.topbar-links a:not(.btn) {
+  text-decoration: none;
+  position: relative;
+}
+
+/* underline that slides in on hover */
+.topbar-links a:not(.btn)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform 0.25s;
+}
+
+.topbar-links a:not(.btn):hover::after {
+  transform: scaleX(1);
+}
+
+.topbar-cta {
+  padding: 0.6em 1.2em;
+}
+
+/* ---------- Hero ---------- */
+
+.landing-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(2rem, 6vh, 4rem) 1rem 2rem;
+}
+
+.landing-main .kicker {
+  min-height: 1.2em;
+}
+
+.landing-title {
+  max-width: 900px;
+  font-size: clamp(1.9rem, min(5.5vw, 7vh), 4.2rem);
+  font-weight: 900;
+  animation: title-in 1s cubic-bezier(0.2, 0.9, 0.2, 1.1) both;
+}
+
+@keyframes title-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+    letter-spacing: 0.3em;
+  }
+}
+
+/* gold light sweeping across the word */
+.shine {
+  background: linear-gradient(100deg, var(--red-hot) 20%, var(--gold) 45%, #fff 50%, var(--gold) 55%, var(--red-hot) 80%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+/* ---------- Globe + enter button ---------- */
+
+.globe-stage {
+  position: relative;
+  /* small enough that the stats still show on a laptop screen */
+  width: min(520px, 92vw, 52vh);
+  min-width: 260px;
+  aspect-ratio: 1;
+  margin: 0.5rem 0 1.5rem;
+  display: grid;
+  place-items: center;
+}
+
+#globe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.enter-button {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  background: radial-gradient(circle, #ffffff 0%, #bff6ff 18%, var(--cyan) 40%, #0b4f6c 70%, #05202c 100%);
+  box-shadow: 0 0 40px var(--cyan), 0 0 100px rgba(94, 231, 255, 0.5), inset 0 0 30px #fff;
+  animation: reactor-pulse 1.8s ease-in-out infinite;
+  transition: transform 0.25s;
+}
+
+.enter-button:hover {
+  transform: scale(1.1);
+}
+
+@keyframes reactor-pulse {
+  50% {
+    box-shadow: 0 0 70px var(--cyan), 0 0 160px rgba(94, 231, 255, 0.7), inset 0 0 40px #fff;
+  }
+}
+
+/* spinning dashed ring around the button */
+.enter-ring {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 3px dashed var(--gold);
+  animation: spin 6s linear infinite;
+}
+
+.enter-ring::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 201, 74, 0.5);
+  border-top-color: var(--red-hot);
+  animation: spin 1.5s linear infinite reverse;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.enter-label {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: #031018;
+  text-shadow: 0 0 8px #fff;
+}
+
+/* when clicked: power up before leaving the page */
+.enter-button.is-launching {
+  animation: launch 0.7s ease-in forwards;
+}
+
+@keyframes launch {
+  40% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(14);
+    opacity: 0;
+  }
+}
+
+/* ---------- Stats row ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  width: min(1000px, 100%);
+}
+
+.stat {
+  padding: 1.2rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.stat:hover {
+  transform: translateY(-6px);
+  border-color: var(--gold);
+  box-shadow: 0 10px 30px rgba(255, 201, 74, 0.2);
+}
+
+.stat strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(255, 201, 74, 0.5);
+}
+
+.stat > span {
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 700px) {
+  .topbar-links a:not(.btn) {
+    display: none;
+  }
+
+  .brand {
+    font-size: 0.8rem;
+  }
+
+  .topbar-cta {
+    font-size: 0.7rem;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .enter-button {
+    width: 130px;
+    height: 130px;
+  }
+
+  .enter-label {
+    font-size: 0.75rem;
+  }
+}

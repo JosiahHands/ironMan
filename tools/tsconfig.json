@@ -1,0 +1,15 @@
+{
+  // The tools run directly with Node ("node tools/fetch-media.ts"), which strips the types.
+  // This config is only for type checking ("npm run check") and editor help.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true
+  },
+  "include": ["*.ts"]
+}
