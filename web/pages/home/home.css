@@ -1083,40 +1083,6 @@ body.flash::before {
   margin-top: 1rem;
 }
 
-/* big 3-2-1 countdown over everything */
-.countdown {
-  position: fixed;
-  inset: 0;
-  z-index: 900;
-  display: none;
-  place-items: center;
-  background: rgba(5, 7, 15, 0.85);
-  backdrop-filter: blur(6px);
-}
-
-.countdown.is-on {
-  display: grid;
-}
-
-.countdown span {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(8rem, 30vw, 18rem);
-  color: var(--gold);
-  text-shadow: 0 0 60px var(--red-hot);
-}
-
-.countdown span.tick {
-  animation: tick 0.8s ease-out;
-}
-
-@keyframes tick {
-  from {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
-
 /* ---------- Small screens ---------- */
 
 @media (max-width: 900px) {

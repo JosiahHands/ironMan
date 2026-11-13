@@ -291,6 +291,140 @@ body.has-reticle summary {
   }
 }
 
+/* ---------- Warp jump into the game (leaving half; the game page has the arriving half) ---------- */
+
+.warp {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.warp canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* the page darkens around the click point */
+.warp-out {
+  background: radial-gradient(circle at var(--wx) var(--wy), transparent 0, rgba(5, 7, 15, 0.75) 60%);
+  animation: warp-darken 0.3s ease-out both;
+}
+
+@keyframes warp-darken {
+  from {
+    opacity: 0;
+  }
+}
+
+/* the page zooms toward the click and blurs (body > raises priority over page transitions) */
+body > .warp-zoom {
+  transform: scale(2.4);
+  filter: blur(10px) brightness(1.8);
+  transition:
+    transform 1.05s cubic-bezier(0.6, 0, 0.9, 0.4),
+    filter 1.05s ease-in;
+}
+
+/* arc reactor rings that spin while closing in on the click point */
+.warp-iris {
+  position: absolute;
+  left: var(--wx);
+  top: var(--wy);
+}
+
+.warp-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  translate: -50% -50%;
+}
+
+.ring-a {
+  width: 260px;
+  height: 260px;
+  border: 6px solid var(--cyan);
+  border-left-color: transparent;
+  box-shadow: 0 0 30px var(--cyan), inset 0 0 30px var(--cyan);
+  animation: ring-close 1.05s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+
+.ring-b {
+  width: 190px;
+  height: 190px;
+  border: 10px dotted var(--gold);
+  filter: drop-shadow(0 0 8px var(--gold));
+  animation: ring-close-back 1.05s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+
+.ring-c {
+  width: 120px;
+  height: 120px;
+  border: 4px solid #fff;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  box-shadow: 0 0 20px #fff;
+  animation: ring-close 0.9s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+
+@keyframes ring-close {
+  from {
+    scale: 9;
+    opacity: 0;
+    rotate: 0deg;
+  }
+  60% {
+    scale: 1;
+    opacity: 1;
+  }
+  to {
+    scale: 0.3;
+    opacity: 1;
+    rotate: 600deg;
+  }
+}
+
+@keyframes ring-close-back {
+  from {
+    scale: 9;
+    opacity: 0;
+    rotate: 0deg;
+  }
+  60% {
+    scale: 1;
+    opacity: 1;
+  }
+  to {
+    scale: 0.3;
+    opacity: 1;
+    rotate: -500deg;
+  }
+}
+
+/* white-hot flash that grows from the click until it fills the screen */
+.warp-flash {
+  position: absolute;
+  left: var(--wx);
+  top: var(--wy);
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 50%, #dffbff 62%, rgba(94, 231, 255, 0) 72%);
+  scale: 0;
+  animation: flash-grow 0.45s 0.6s cubic-bezier(0.7, 0, 1, 0.5) forwards;
+}
+
+@keyframes flash-grow {
+  to {
+    scale: 220;
+  }
+}
+
 /* ---------- Footer + expandable credits ---------- */
 
 .site-footer {
@@ -301,6 +435,42 @@ body.has-reticle summary {
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 1rem;
+}
+
+/* author signature in the bottom-left corner of the footer */
+.signature {
+  position: absolute;
+  left: clamp(1rem, 3vw, 2rem);
+  bottom: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+  text-align: left;
+  color: var(--muted);
+}
+
+.signature strong {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+.signature a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.signature a:hover {
+  text-decoration: underline;
+}
+
+/* on narrow screens there's no room beside the credits, so it sits below them */
+@media (max-width: 700px) {
+  .signature {
+    position: static;
+    margin-top: 1.5rem;
+    text-align: center;
+  }
 }
 
 .made-for {

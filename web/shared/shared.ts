@@ -8,6 +8,7 @@
 //   - numbers that count up when scrolled into view  (add data-count-to="85")
 //   - typewriter text                                (add data-type="text to type")
 //   - the photo/video credits list in the footer     (add id="credits-list")
+//   - a warp-jump transition on links to the game    (add data-game-link)
 
 // ---------------------------------------------------------------------------
 // Targeting cursor
@@ -227,6 +228,128 @@ function makeLink(text: string, url: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Warp jump into the game
+// Every link marked data-game-link plays this instead of a normal page change:
+// the page zooms toward the click, light streaks shoot outward, arc reactor rings
+// close in, and a white flash fills the screen. The game page then opens out of
+// that same white flash (see pages/game), so the two halves feel like one move.
+// ---------------------------------------------------------------------------
+
+type WarpStreak = { angle: number; distance: number; speed: number; color: string; width: number };
+
+let isWarping = false;
+
+function setupGameLinks() {
+  document.querySelectorAll<HTMLAnchorElement>("[data-game-link]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      let x = event.clientX;
+      let y = event.clientY;
+      // a keyboard "click" (Enter key) has no mouse position, so use the middle of the link
+      if (event.detail === 0) {
+        const box = link.getBoundingClientRect();
+        x = box.left + box.width / 2;
+        y = box.top + box.height / 2;
+      }
+      warpTo(link.href, x, y);
+    });
+  });
+
+  // The Back button can bring this page back frozen mid-warp, so undo the warp
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) clearWarp();
+  });
+}
+
+function warpTo(url: string, x: number, y: number) {
+  if (isWarping) return;
+  isWarping = true;
+
+  const overlay = document.createElement("div");
+  overlay.className = "warp warp-out";
+  overlay.style.setProperty("--wx", `${x}px`);
+  overlay.style.setProperty("--wy", `${y}px`);
+  overlay.innerHTML = `
+    <canvas></canvas>
+    <div class="warp-iris">
+      <span class="warp-ring ring-a"></span>
+      <span class="warp-ring ring-b"></span>
+      <span class="warp-ring ring-c"></span>
+    </div>
+    <div class="warp-flash"></div>`;
+  document.body.append(overlay);
+
+  // Every part of the page zooms toward the click point
+  for (const element of Array.from(document.body.children) as HTMLElement[]) {
+    if (element === overlay || element.matches(".reticle, .blast-layer")) continue;
+    const box = element.getBoundingClientRect();
+    element.style.transformOrigin = `${x - box.left}px ${y - box.top}px`;
+    element.classList.add("warp-zoom");
+  }
+
+  playWarpStreaks(overlay.querySelector("canvas")!, x, y, "out", 1100);
+  fireBlast(x, y, "#5ee7ff", 2);
+  setTimeout(() => (window.location.href = url), 1050);
+}
+
+function clearWarp() {
+  isWarping = false;
+  document.querySelectorAll(".warp-out").forEach((element) => element.remove());
+  document.querySelectorAll(".warp-zoom").forEach((element) => element.classList.remove("warp-zoom"));
+}
+
+// Hyperspace light streaks on a full-screen canvas.
+//   "out": streaks start slow near the origin and speed up (leaving a page)
+//   "in":  streaks start fast and slow down as they fade (arriving on a page)
+function playWarpStreaks(canvas: HTMLCanvasElement, originX: number, originY: number, mode: "out" | "in", duration: number) {
+  const ctx = canvas.getContext("2d")!;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const farthest = Math.hypot(canvas.width, canvas.height);
+  const colors = ["#ffffff", "#5ee7ff", "#5ee7ff", "#ffc94a"];
+
+  const newStreak = (distance: number): WarpStreak => ({
+    angle: Math.random() * Math.PI * 2,
+    distance,
+    speed: mode === "out" ? 2 + Math.random() * 4 : 40 + Math.random() * 45,
+    color: colors[Math.floor(Math.random() * colors.length)]!,
+    width: 1 + Math.random() * 2.5,
+  });
+
+  const streaks: WarpStreak[] = [];
+  for (let i = 0; i < 260; i++) {
+    streaks.push(newStreak(mode === "out" ? Math.random() * farthest * 0.5 : Math.random() * 80));
+  }
+
+  const start = performance.now();
+  function frame(now: number) {
+    const progress = Math.min((now - start) / duration, 1);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = mode === "out" ? Math.min(1, progress * 3) : 1 - progress;
+
+    for (const streak of streaks) {
+      streak.speed *= mode === "out" ? 1.07 : 0.94;
+      streak.distance += streak.speed;
+      // when leaving, keep the screen full by restarting streaks that fly off
+      if (mode === "out" && streak.distance > farthest) Object.assign(streak, newStreak(Math.random() * 60));
+
+      const tail = Math.max(0, streak.distance - streak.speed * 6);
+      const cos = Math.cos(streak.angle);
+      const sin = Math.sin(streak.angle);
+      ctx.strokeStyle = streak.color;
+      ctx.lineWidth = streak.width;
+      ctx.beginPath();
+      ctx.moveTo(originX + cos * tail, originY + sin * tail);
+      ctx.lineTo(originX + cos * streak.distance, originY + sin * streak.distance);
+      ctx.stroke();
+    }
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------------------
 
 setupReticle();
 setupBlasts();
@@ -234,3 +357,4 @@ whenVisible("[data-reveal]", (element) => element.classList.add("is-visible"));
 whenVisible("[data-count-to]", countUp);
 whenVisible("[data-type]", typeText);
 renderCredits();
+setupGameLinks();

@@ -11,7 +11,16 @@
     <script defer src="../../dist/shared/shared.js"></script>
     <script defer src="../../dist/pages/game/game.js"></script>
   </head>
-  <body class="game-page">
+  <!-- "intro" plays the arriving half of the warp, then game.ts removes it -->
+  <body class="game-page intro">
+    <!-- starts as a white flash (where the warp from the other pages ended),
+         then an iris opens out of it while light streaks fly past -->
+    <div class="warp warp-in" id="warp-in" aria-hidden="true">
+      <canvas id="warp-canvas"></canvas>
+      <div class="iris-hole"></div>
+      <div class="iris-ring"></div>
+    </div>
+
     <header class="game-nav">
       <a class="brand" href="../../index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
       <a class="btn btn-ghost" href="../home/home.html">← Back to the armory</a>
@@ -20,6 +29,13 @@
     <main class="stage" id="stage">
       <video class="sky-video" src="../../media/videos/clouds.mp4" poster="../../media/videos/clouds.webp" autoplay muted loop playsinline></video>
       <canvas id="game"></canvas>
+
+      <!-- HUD corner brackets that draw themselves in, and a one-time scan line -->
+      <div class="stage-frame" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="stage-scan" aria-hidden="true"></div>
+
+      <!-- 3-2-1-GO! before the first mission -->
+      <div class="countdown" id="countdown" aria-live="assertive"><span id="countdown-number"></span></div>
 
       <!-- score, shields and beam meter -->
       <div class="hud" id="hud">
@@ -69,6 +85,10 @@
         <summary>Photo &amp; video credits</summary>
         <ul class="credits-list" id="credits-list"></ul>
       </details>
+      <p class="signature">
+        <strong>BUILT BY JOSIAH HANDS</strong><br />
+        <a href="mailto:josiahwhands@gmail.com">josiahwhands@gmail.com</a>
+      </p>
     </footer>
   </body>
 </html>

@@ -172,27 +172,78 @@ async function checkHome(browser: Browser) {
   await shot(browser, "home-phone-hero");
   await scrollTo(browser, "#suits");
   await shot(browser, "home-phone-suits");
+  await scrollTo(browser, ".site-footer");
+  await shot(browser, "home-phone-footer");
+}
+
+// Every game link should warp-jump into the game page
+async function checkWarp(browser: Browser) {
+  console.log("Warp jump into the game");
+  await open(browser, "pages/home/home.html", DESKTOP);
+
+  const links = await browser.evaluate(`document.querySelectorAll("[data-game-link]").length`);
+  if (links !== 3) problems.push(`[${currentStep}] expected 3 game links on home, found ${links}`);
+
+  await clickOn(browser, ".nav-play");
+  await wait(550);
+  await shot(browser, "warp-1-leaving");
+
+  // wait for the game page to open, then catch the arriving half at a few moments
+  currentStep = "warp arriving on game page";
+  await browser.waitFor(`location.href.includes("game") && document.readyState === "complete"`, 15);
+  await wait(250);
+  await shot(browser, "warp-2-arriving");
+  await wait(500);
+  await shot(browser, "warp-3-iris-opening");
+  await wait(1700);
+  await shot(browser, "warp-4-hud-booted");
+  await checkMedia(browser);
 }
 
 async function checkGame(browser: Browser) {
   console.log("Game page");
   await open(browser, "pages/game/game.html", DESKTOP);
+  await wait(1500); // the HUD boot-up after the warp
   await checkMedia(browser);
   await shot(browser, "game-1-start-screen");
 
+  // the first Start mission gets a countdown
   await clickOn(browser, "#start-button");
+  await wait(1000);
+  await shot(browser, "game-2-countdown");
+  if (!(await browser.evaluate(`document.getElementById("countdown").classList.contains("is-on")`))) {
+    problems.push(`[${currentStep}] countdown did not show after Start mission`);
+  }
+  await wait(2600); // rest of 3-2-1-GO
+
   // fly around for a few seconds
   for (let i = 0; i < 60; i++) {
     await browser.moveMouse(250 + Math.sin(i / 6) * 150, 450 + Math.cos(i / 4) * 250);
     await wait(100);
   }
-  await shot(browser, "game-2-playing");
+  await shot(browser, "game-3-playing");
 
   // stay still and let the drones win, to see the game over screen
   await browser.moveMouse(700, 450);
   await browser.waitFor(`document.getElementById("screen").classList.contains("is-on")`, 90);
   await wait(800);
-  await shot(browser, "game-3-game-over");
+  await shot(browser, "game-4-game-over");
+
+  // Play again starts straight away, with no countdown
+  await clickOn(browser, "#start-button");
+  await wait(300);
+  const replay = await browser.evaluate(`({
+    countdown: document.getElementById("countdown").classList.contains("is-on"),
+    playing: document.body.classList.contains("is-playing"),
+  })`);
+  if (replay.countdown || !replay.playing) {
+    problems.push(`[${currentStep}] Play again should start right away (countdown: ${replay.countdown}, playing: ${replay.playing})`);
+  }
+  await shot(browser, "game-5-play-again");
+
+  await browser.evaluate(`document.querySelector(".credits").open = true`);
+  await scrollTo(browser, ".site-footer");
+  await shot(browser, "game-6-footer");
 
   await open(browser, "pages/game/game.html", PHONE);
   await shot(browser, "game-phone-start");
@@ -208,6 +259,7 @@ watchForProblems(browser);
 try {
   await checkLanding(browser);
   await checkHome(browser);
+  await checkWarp(browser);
   await checkGame(browser);
 } catch (error) {
   problems.push(`[${currentStep}] test crashed: ${(error as Error).message}`);

@@ -261,7 +261,303 @@
   }
 }
 
+/* ---------- Countdown before the first mission ---------- */
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  display: none;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 20%, rgba(5, 7, 15, 0.55));
+}
+
+.countdown.is-on {
+  display: grid;
+}
+
+.countdown span {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(7rem, 26vw, 16rem);
+  color: var(--gold);
+  text-shadow: 0 0 40px var(--red-hot), 0 0 90px rgba(255, 201, 74, 0.6);
+}
+
+/* a ring bursts out behind every number */
+.countdown span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.2em;
+  height: 1.2em;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 0.04em solid var(--cyan);
+  box-shadow: 0 0 30px var(--cyan), inset 0 0 30px var(--cyan);
+  opacity: 0;
+}
+
+.countdown span.tick {
+  animation: tick 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.countdown span.tick::after {
+  animation: tick-ring 0.75s ease-out;
+}
+
+/* GO! gets red-hot */
+.countdown span.go {
+  color: #fff;
+  text-shadow: 0 0 30px var(--cyan), 0 0 80px var(--red-hot);
+}
+
+@keyframes tick {
+  from {
+    transform: scale(2.6) rotate(-8deg);
+    opacity: 0;
+    filter: blur(8px);
+  }
+}
+
+@keyframes tick-ring {
+  from {
+    scale: 0.3;
+    opacity: 1;
+  }
+  to {
+    scale: 2.4;
+    opacity: 0;
+  }
+}
+
+/* ---------- Arriving: the second half of the warp from the other pages ---------- */
+
+/* the white surround is a huge shadow around a hole that grows from the middle */
+.iris-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  translate: -50% -50%;
+  box-shadow:
+    0 0 0 150vmax #fff,
+    inset 0 0 40px 12px var(--cyan),
+    0 0 50px 20px var(--cyan);
+  animation: iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards;
+}
+
+/* spinning gold ring riding along the edge of the hole */
+.iris-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  translate: -50% -50%;
+  border: 8px dashed var(--gold);
+  filter: drop-shadow(0 0 10px var(--gold));
+  animation:
+    iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards,
+    spin-ring 1.4s linear infinite;
+}
+
+@keyframes iris-open {
+  to {
+    width: 300vmax;
+    height: 300vmax;
+  }
+}
+
+@keyframes spin-ring {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* when finished, fade out whatever is left */
+.warp-in {
+  animation: warp-in-done 0.3s 1.35s forwards;
+}
+
+@keyframes warp-in-done {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* glowing HUD corner brackets around the play area */
+.stage-frame span {
+  position: absolute;
+  z-index: 5;
+  width: 70px;
+  height: 70px;
+  border: 3px solid var(--cyan);
+  filter: drop-shadow(0 0 6px var(--cyan));
+  pointer-events: none;
+}
+
+.stage-frame span:nth-child(1) { top: 72px; left: 14px; border-right: 0; border-bottom: 0; }
+.stage-frame span:nth-child(2) { top: 72px; right: 14px; border-left: 0; border-bottom: 0; }
+.stage-frame span:nth-child(3) { bottom: 14px; left: 14px; border-right: 0; border-top: 0; }
+.stage-frame span:nth-child(4) { bottom: 14px; right: 14px; border-left: 0; border-top: 0; }
+
+/* HUD boot-up: everything below only runs while the body has the "intro" class */
+
+.intro .stage-frame span {
+  animation: bracket-draw 0.5s 1.05s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+.intro .stage-frame span:nth-child(2) { animation-delay: 1.15s; }
+.intro .stage-frame span:nth-child(3) { animation-delay: 1.25s; }
+.intro .stage-frame span:nth-child(4) { animation-delay: 1.35s; }
+
+@keyframes bracket-draw {
+  from {
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* one bright line sweeps down the play area */
+.stage-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 6;
+  height: 3px;
+  background: var(--cyan);
+  box-shadow: 0 0 20px 6px var(--cyan);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro .stage-scan {
+  animation: stage-scan 1s 1.1s ease-in-out both;
+}
+
+@keyframes stage-scan {
+  from {
+    top: 0;
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.intro .game-nav {
+  animation: drop-in 0.6s 1.15s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+@keyframes drop-in {
+  from {
+    transform: translateY(-110%);
+    opacity: 0;
+  }
+}
+
+/* the HUD slides up, then flickers on like a screen powering up */
+.intro .hud {
+  animation: hud-boot 0.9s 1.25s ease-out both;
+}
+
+@keyframes hud-boot {
+  0% {
+    transform: translate(-50%, 160%);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  70% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* the briefing box assembles: a thin line stretches out, then opens up */
+.intro .screen-box {
+  animation: assemble 0.9s 1.2s cubic-bezier(0.7, 0, 0.2, 1) both;
+}
+
+@keyframes assemble {
+  0% {
+    clip-path: inset(50% 50% 50% 50%);
+    box-shadow: 0 0 40px var(--cyan);
+  }
+  45% {
+    clip-path: inset(49.5% 0 49.5% 0);
+    box-shadow: 0 0 40px var(--cyan);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* glitchy title: jumps around with split red/cyan colors, then settles */
+.intro .screen-box h1 {
+  animation: glitch 0.7s 1.9s steps(1) both;
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(4px, -2px);
+    text-shadow: -4px 0 var(--red-hot), 4px 0 var(--cyan);
+  }
+  20% {
+    transform: translate(-5px, 2px) skewX(-8deg);
+    text-shadow: 5px 0 var(--red-hot), -5px 0 var(--cyan);
+  }
+  40% {
+    transform: translate(3px, 1px);
+    text-shadow: -2px 0 var(--red-hot), 2px 0 var(--cyan);
+    clip-path: inset(10% 0 35% 0);
+  }
+  60% {
+    transform: translate(-2px, -1px) skewX(6deg);
+    text-shadow: 3px 0 var(--red-hot), -3px 0 var(--cyan);
+    clip-path: none;
+  }
+  80% {
+    transform: none;
+    text-shadow: -1px 0 var(--red-hot), 1px 0 var(--cyan);
+  }
+  100% {
+    transform: none;
+    text-shadow: none;
+  }
+}
+
 @media (max-width: 600px) {
+  .stage-frame span {
+    width: 40px;
+    height: 40px;
+  }
+
   .game-nav .btn {
     font-size: 0;
     padding: 0.6em 0.9em;

@@ -5,6 +5,8 @@
 // - Blue cores = triple shot, red hearts = +1 shield
 // - Each kill charges the MEGA BEAM; when full press SPACE or tap the meter
 // - Every 25 seconds the level goes up and drones come faster
+// - The first "Start mission" gets a 3-2-1-GO countdown; "Play again" starts straight away
+// - The page opens with the second half of the warp jump from the other pages (playIntro)
 
 type Bolt = { x: number; y: number; vx: number; vy: number };
 type EnemyKind = "drone" | "zipper" | "tank";
@@ -44,6 +46,8 @@ function startGame() {
   const bestText = document.getElementById("best")!;
   const startButton = document.getElementById("start-button")!;
   const banner = document.getElementById("banner")!;
+  const countdown = document.getElementById("countdown")!;
+  const countdownNumber = document.getElementById("countdown-number")!;
 
   const MAX_SHIELDS = 5;
   const HERO_SCALE = 1.6; // how big the hero is drawn
@@ -53,6 +57,8 @@ function startGame() {
   let width = 0;
   let height = 0;
   let playing = false;
+  let countingDown = false; // the 3-2-1-GO before the first mission
+  let hasPlayed = false; // "Play again" skips the countdown
   let score = 0;
   let level = 1;
   let shields = 3;
@@ -121,11 +127,61 @@ function startGame() {
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
 
   beamButton.addEventListener("click", fireMegaBeam);
-  startButton.addEventListener("click", startRun);
+  startButton.addEventListener("click", () => {
+    if (playing || countingDown) return;
+    if (hasPlayed) startRun(false);
+    else runCountdown();
+  });
+
+  // ----- arriving: the second half of the warp jump from the other pages -----
+
+  function playIntro() {
+    const warpIn = document.getElementById("warp-in")!;
+    const warpCanvas = document.getElementById("warp-canvas") as HTMLCanvasElement;
+    playWarpStreaks(warpCanvas, window.innerWidth / 2, window.innerHeight / 2, "in", 1500);
+    setTimeout(() => warpIn.remove(), 1800);
+    // the HUD boot-up animations only run while the body has "intro"
+    setTimeout(() => document.body.classList.remove("intro"), 3000);
+  }
+  playIntro();
 
   // ----- starting and ending -----
 
-  function startRun() {
+  // 3... 2... 1... GO! while the hero flies in from the left, then play
+  function runCountdown() {
+    countingDown = true;
+    screen.classList.remove("is-on");
+    document.body.classList.add("is-playing");
+    stage.scrollIntoView({ behavior: "smooth" });
+    updateHud();
+
+    player.x = -80;
+    player.y = player.targetY = height * 0.5;
+    player.targetX = width * 0.2;
+    countdown.classList.add("is-on");
+
+    const steps = ["3", "2", "1", "GO!"];
+    steps.forEach((text, i) => {
+      setTimeout(() => {
+        countdownNumber.textContent = text;
+        countdownNumber.classList.toggle("go", text === "GO!");
+        countdownNumber.classList.remove("tick");
+        void countdownNumber.offsetWidth; // restart the animation
+        countdownNumber.classList.add("tick");
+        const box = stage.getBoundingClientRect();
+        fireBlast(box.left + box.width / 2, box.top + box.height / 2, text === "GO!" ? "#ffc94a" : "#5ee7ff", text === "GO!" ? 4 : 2);
+      }, i * 800);
+    });
+
+    setTimeout(() => {
+      countdown.classList.remove("is-on");
+      countingDown = false;
+      startRun(true);
+    }, steps.length * 800);
+  }
+
+  function startRun(afterCountdown: boolean) {
+    hasPlayed = true;
     score = 0;
     level = 1;
     shields = 3;
@@ -140,14 +196,17 @@ function startGame() {
     enemyShots = [];
     pickups = [];
     particles = [];
-    player.x = player.targetX = width * 0.2;
-    player.y = player.targetY = height * 0.5;
 
     playing = true;
     document.body.classList.add("is-playing");
     screen.classList.remove("is-on");
     stage.scrollIntoView({ behavior: "smooth" });
-    showBanner("GO, NOAH!");
+    // after the countdown the hero has already flown in; "Play again" starts straight away
+    if (!afterCountdown) {
+      player.x = player.targetX = width * 0.2;
+      player.y = player.targetY = height * 0.5;
+      showBanner("GO, NOAH!");
+    }
     updateHud();
   }
 
@@ -254,18 +313,9 @@ function startGame() {
 
   // ----- update (one frame; dt = 1 at 60fps) -----
 
-  function update(dt: number) {
-    playTime += dt / 60;
-
-    // level up every 25 seconds
-    const newLevel = 1 + Math.floor(playTime / 25);
-    if (newLevel > level) {
-      level = newLevel;
-      showBanner(`LEVEL ${level}!`);
-      bump(levelText);
-      updateHud();
-    }
-
+  // The hero glides toward the mouse/finger (or where the keys push it), tilting as it moves.
+  // Also used during the countdown, so the hero can fly in before play starts.
+  function movePlayer(dt: number) {
     // keyboard moves the target point
     const keySpeed = 9 * dt;
     if (keys.has("arrowup") || keys.has("w")) player.targetY -= keySpeed;
@@ -280,6 +330,21 @@ function startGame() {
     player.x += (player.targetX - player.x) * 0.18 * dt;
     player.y += moveY;
     player.tilt = Math.max(-0.4, Math.min(0.4, moveY * 0.04));
+  }
+
+  function update(dt: number) {
+    playTime += dt / 60;
+
+    // level up every 25 seconds
+    const newLevel = 1 + Math.floor(playTime / 25);
+    if (newLevel > level) {
+      level = newLevel;
+      showBanner(`LEVEL ${level}!`);
+      bump(levelText);
+      updateHud();
+    }
+
+    movePlayer(dt);
 
     // automatic repulsor fire
     fireTimer -= dt;
@@ -498,7 +563,7 @@ function startGame() {
 
     // hero blinks while invincible after a hit
     const blinking = invincibleTime > 0 && Math.floor(invincibleTime / 5) % 2 === 0;
-    if (playing && !blinking) drawHero();
+    if ((playing || countingDown) && !blinking) drawHero();
 
     ctx.restore();
   }
@@ -671,6 +736,7 @@ function startGame() {
     const dt = Math.min((now - lastTime) / (1000 / 60), 3);
     lastTime = now;
     if (playing) update(dt);
+    else if (countingDown) movePlayer(dt); // the hero flies in during the countdown
     draw(dt);
     requestAnimationFrame(frame);
   }

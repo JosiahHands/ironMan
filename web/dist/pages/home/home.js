@@ -9,7 +9,7 @@ function startHome() {
     setupReactor();
     setupFlipCards();
     setupSuitLab();
-    setupLaunch();
+    // links to the game (data-game-link) get their warp jump from shared/shared.ts
 }
 // Split headings marked data-split into single letters so each one can animate
 function splitLetters() {
@@ -241,37 +241,6 @@ function setupSuitLab() {
         nameInput.value = `MARK NOAH-${number}`;
         nameDisplay.textContent = nameInput.value;
         celebrate();
-    });
-}
-// ---------------------------------------------------------------------------
-// Launch button: 3-2-1 countdown, then off to the game
-// ---------------------------------------------------------------------------
-function setupLaunch() {
-    const button = document.getElementById("launch-button");
-    const overlay = document.getElementById("countdown");
-    const number = document.getElementById("countdown-number");
-    button.addEventListener("click", () => {
-        overlay.classList.add("is-on");
-        let count = 3;
-        function show(text) {
-            number.textContent = text;
-            number.classList.remove("tick");
-            void number.offsetWidth;
-            number.classList.add("tick");
-            fireBlast(window.innerWidth / 2, window.innerHeight / 2, "#ffc94a", 2.5);
-        }
-        show(String(count));
-        const timer = setInterval(() => {
-            count--;
-            if (count > 0) {
-                show(String(count));
-            }
-            else {
-                clearInterval(timer);
-                show("GO!");
-                setTimeout(() => (window.location.href = "../game/game.html"), 600);
-            }
-        }, 800);
     });
 }
 startHome();
