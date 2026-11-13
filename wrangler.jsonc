@@ -1,0 +1,17 @@
+// Cloudflare deploy settings: "npx wrangler deploy" publishes the site.
+// The site is plain static files in web/, so no Worker code is needed.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "noahs-armory",
+  "compatibility_date": "2026-11-01",
+
+  // Compile the TypeScript before every deploy (and before "wrangler dev")
+  "build": {
+    "command": "npm run build"
+  },
+
+  // Everything in web/ is uploaded, except what web/.assetsignore lists
+  "assets": {
+    "directory": "./web"
+  }
+}

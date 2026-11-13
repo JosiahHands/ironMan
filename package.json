@@ -1,0 +1,14 @@
+{
+  "name": "noahs-armory",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p web",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "tsc -p web && node tests/check-pages.ts"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "wrangler": "^4.161.0"
+  }
+}

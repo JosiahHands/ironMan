@@ -12,15 +12,34 @@ Every page also has a targeting cursor, a repulsor blast wherever you click, and
 
 ## Running the site
 
-The site is written in TypeScript, so compile it first:
+Install the build tools once (TypeScript and Cloudflare's Wrangler):
 
 ```sh
-tsc -p web
+npm install
+```
+
+The site is written in TypeScript, so compile it before opening it:
+
+```sh
+npm run build        # same as: tsc -p web
 ```
 
 Then open `web/index.html` in a browser. You don't need a server: double-clicking the file works. Every image, video and font is stored in the project, so the site doesn't need the internet.
 
-To recompile automatically while you edit, run `tsc -p web --watch`.
+To recompile automatically while you edit, run `npx tsc -p web --watch`. To preview the site exactly as Cloudflare will serve it, run `npm run dev` and open the address it prints.
+
+## Deploying to Cloudflare
+
+```sh
+npx wrangler login   # first time only
+npx wrangler deploy  # or: npm run deploy
+```
+
+Wrangler reads `wrangler.jsonc`, which does two things:
+- Runs `npm run build` first, so the compiled JavaScript is always up to date.
+- Uploads everything in `web/` as a static site, except what `web/.assetsignore` lists: the raw downloads in `media/media-raw/` (one is over Cloudflare's 25 MiB per-file limit), the TypeScript source and the config files.
+
+Cloudflare serves pages without `.html` (for example `/pages/home/home`). Links ending in `.html` still work because they redirect.
 
 ## Project layout
 
@@ -40,8 +59,11 @@ web/
     fonts/                           Orbitron + Rajdhani
     credits.json                     who made each photo/video
   dist/                              compiled JavaScript (made by tsc)
+  .assetsignore                      files in web/ that are NOT uploaded to Cloudflare
 tools/                               command-line helpers for media
 tests/                               automated page checks
+wrangler.jsonc                       Cloudflare deploy settings
+package.json                         build / dev / deploy / test commands
 ```
 
 Each page loads `shared/credits.js`, then `shared/shared.js`, then its own script, all from `dist/`.
@@ -96,8 +118,9 @@ Video options: `--start`, `--length`, `--width` and `--boomerang` (plays forward
 ## Testing
 
 ```sh
-tsc -p web
-node tests/check-pages.ts
+npm test                                          # compile + check the files on disk
+node tests/check-pages.ts http://localhost:8787   # check "npm run dev" while it's running
+node tests/check-pages.ts https://<your-site>     # check the live deployed site
 ```
 
 This opens every page in a hidden Chrome at desktop and phone sizes. It clicks through the interactive parts (scanning a suit, overloading the reactor, flipping cards, the helmet designer, playing the game until game over) and saves screenshots to `tests/screenshots/`.

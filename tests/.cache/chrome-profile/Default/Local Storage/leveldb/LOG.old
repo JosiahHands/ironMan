@@ -1,2 +1,4 @@
-2026/11/13-08:46:34.241 473a81 Creating DB /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb since it was missing.
-2026/11/13-08:46:34.243 473a81 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/11/13-09:12:59.820 47a578 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/11/13-09:12:59.820 47a578 Recovering log #3
+2026/11/13-09:12:59.820 47a578 (ignoring error) /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/000003.log: dropping 179 bytes; Corruption: checksum mismatch
+2026/11/13-09:12:59.820 47a578 Reusing old log /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/000003.log 

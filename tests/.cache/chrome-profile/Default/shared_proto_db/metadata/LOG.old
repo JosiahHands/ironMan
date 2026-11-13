@@ -1,2 +1,3 @@
-2026/11/13-08:46:34.348 473a36 Creating DB /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/shared_proto_db/metadata since it was missing.
-2026/11/13-08:46:34.351 473a36 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/shared_proto_db/metadata/MANIFEST-000001
+2026/11/13-09:12:59.925 47a532 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/shared_proto_db/metadata/MANIFEST-000001
+2026/11/13-09:12:59.925 47a532 Recovering log #3
+2026/11/13-09:12:59.925 47a532 Reusing old log /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/shared_proto_db/metadata/000003.log 

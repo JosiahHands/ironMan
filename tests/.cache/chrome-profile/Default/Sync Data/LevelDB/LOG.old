@@ -1,2 +1,3 @@
-2026/11/13-08:46:34.212 473a28 Creating DB /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Sync Data/LevelDB since it was missing.
-2026/11/13-08:46:34.216 473a28 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Sync Data/LevelDB/MANIFEST-000001
+2026/11/13-09:12:59.795 47a520 Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Sync Data/LevelDB/MANIFEST-000001
+2026/11/13-09:12:59.795 47a520 Recovering log #3
+2026/11/13-09:12:59.795 47a520 Reusing old log /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Sync Data/LevelDB/000003.log 

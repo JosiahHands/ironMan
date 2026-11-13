@@ -1,3 +1,4 @@
-2026/11/13-08:50:22.295 474a4e Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/11/13-08:50:22.296 474a4e Recovering log #3
-2026/11/13-08:50:22.296 474a4e Reusing old log /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/000003.log 
+2026/11/13-09:14:01.655 47aa3e Reusing MANIFEST /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/11/13-09:14:01.655 47aa3e Recovering log #3
+2026/11/13-09:14:01.655 47aa3e (ignoring error) /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/000003.log: dropping 351 bytes; Corruption: checksum mismatch
+2026/11/13-09:14:01.655 47aa3e Reusing old log /Users/josiahhands/projects/ironMan/tests/.cache/chrome-profile/Default/Local Storage/leveldb/000003.log 

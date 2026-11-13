@@ -1,0 +1,12 @@
+# Files in web/ that should NOT be uploaded to Cloudflare (same format as .gitignore)
+
+# Original downloads: the pages only use the edited copies (and one is over Cloudflare's 25 MiB limit)
+media/media-raw/
+media/credits.json
+
+# TypeScript source and settings: the browser only needs the compiled files in dist/
+*.ts
+tsconfig.json
+
+# This file itself
+.assetsignore

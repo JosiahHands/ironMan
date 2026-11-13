@@ -3,7 +3,9 @@
 //
 // Usage:
 //   tsc -p web                      (compile the site first)
-//   node tests/check-pages.ts
+//   node tests/check-pages.ts                          test the files on disk
+//   node tests/check-pages.ts http://localhost:8787    test a running server (e.g. "npx wrangler dev")
+//   node tests/check-pages.ts https://your-site.dev    test the live deployed site
 //
 // Screenshots go to tests/screenshots/. The run fails (exit code 1) if it finds:
 //   - JavaScript errors
@@ -25,7 +27,12 @@ const PHONE = { width: 390, height: 844 };
 const problems: string[] = [];
 let currentStep = "";
 
-const pageUrl = (relativePath: string) => pathToFileURL(path.join(WEB_DIR, relativePath)).href;
+// Pages come from a web address if one was given, otherwise straight from the files in web/
+const BASE_URL = process.argv[2];
+const pageUrl = (relativePath: string) =>
+  BASE_URL
+    ? new URL(relativePath, BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`).href
+    : pathToFileURL(path.join(WEB_DIR, relativePath)).href;
 
 // ---------------------------------------------------------------------------
 // Helpers
