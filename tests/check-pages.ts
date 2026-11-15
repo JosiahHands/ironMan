@@ -93,8 +93,17 @@ async function scrollTo(page: Page, selector: string) {
   await wait(1300); // reveal animations
 }
 
-// A real mouse click in the middle of an element
+// A real mouse click in the middle of an element (scrolled into view first if needed)
 async function clickOn(page: Page, selector: string) {
+  // (scrolled by hand: Playwright's own scrolling waits for the element to stop moving,
+  // and many buttons on this site never stop pulsing)
+  const scrolled = await page.locator(selector).first().evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    if (box.top >= 0 && box.bottom <= window.innerHeight) return false;
+    element.scrollIntoView({ block: "center", behavior: "instant" });
+    return true;
+  });
+  if (scrolled) await wait(200);
   const box = await page.locator(selector).first().boundingBox();
   if (!box) throw new Error(`can't click ${selector}: not on screen`);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -102,10 +111,16 @@ async function clickOn(page: Page, selector: string) {
 
 // Broken images and fonts that didn't load
 async function checkMedia(page: Page) {
-  const report = await page.evaluate(() => ({
-    brokenImages: [...document.images].filter((img) => img.complete && img.naturalWidth === 0).map((img) => img.src),
-    missingFonts: ["900 20px Orbitron", "500 20px Rajdhani", "700 20px Rajdhani"].filter((f) => !document.fonts.check(f)),
-  }));
+  const report = await page.evaluate(async () => {
+    const fonts = ["900 20px Orbitron", "500 20px Rajdhani", "700 20px Rajdhani"];
+    // wait for each font to finish loading (a busy browser can still be on it); a missing or
+    // broken font file still fails the check afterwards
+    await Promise.all(fonts.map((font) => document.fonts.load(font).catch(() => [])));
+    return {
+      brokenImages: [...document.images].filter((img) => img.complete && img.naturalWidth === 0).map((img) => img.src),
+      missingFonts: fonts.filter((font) => !document.fonts.check(font)),
+    };
+  });
   report.brokenImages.forEach((src) => fail(`broken image: ${src}`));
   report.missingFonts.forEach((font) => fail(`font not loaded: ${font}`));
 }
@@ -370,6 +385,82 @@ async function checkGame(page: Page) {
   await shot(page, "game-phone-start");
 }
 
+async function checkSuitLab(page: Page) {
+  console.log(`Suit Lab (${runName})`);
+  await open(page, "pages/suitLab/suitLab.html");
+  await wait(1500); // the garage slides in after the warp
+  await checkMedia(page);
+  await checkCanvases(page, "suit lab garage");
+  await shot(page, "lab-1-garage");
+
+  // picking parts changes the stat bars
+  const speedBar = () => page.evaluate(() => document.getElementById("stat-speed")!.style.width);
+  const speedBefore = await speedBar();
+  await clickOn(page, '[data-part="plating"] [data-value="heavy"]');
+  await clickOn(page, '[data-part="weapon"] [data-value="missiles"]');
+  await clickOn(page, '[data-part="armor"] [data-value="#1f5fd1"]');
+  await wait(600);
+  if ((await speedBar()) === speedBefore) fail("picking heavy plating did not change the speed bar");
+  await scrollTo(page, "#garage");
+  await shot(page, "lab-2-garage-picked");
+
+  // suit up, pick Demolition, then fly right while firing
+  await clickOn(page, "#suit-up");
+  await wait(700);
+  await shot(page, "lab-3-modes");
+  currentStep = "suit lab demolition";
+  await clickOn(page, '[data-mode="demolition"]');
+  await wait(800);
+  await checkCanvases(page, "suit lab city");
+  await page.mouse.move(900, 600);
+  await page.mouse.down();
+  await page.keyboard.down("d");
+  for (let i = 0; i < 40; i++) {
+    await page.mouse.move(850 + Math.sin(i / 5) * 200, 600 + Math.cos(i / 4) * 150);
+    await wait(70);
+  }
+  await page.keyboard.up("d");
+  await page.mouse.up();
+  const score = Number((await page.textContent("#hud-score"))!.replace(/\D/g, ""));
+  if (!(score > 0)) fail("flying and firing in Demolition scored nothing");
+  await shot(page, "lab-4-demolition");
+
+  // the play area changes size without the window resizing: the city must not stretch
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = "520px"));
+  await wait(300);
+  await checkCanvases(page, "suit lab play area shrunk");
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = ""));
+  await wait(300);
+
+  // Drone Defense: the first wave arrives by itself
+  currentStep = "suit lab drone defense";
+  await clickOn(page, "#hud-modes");
+  await wait(500);
+  await clickOn(page, '[data-mode="defense"]');
+  await wait(3500);
+  const wave = await page.textContent("#hud-timer");
+  if (wave !== "1") fail(`Drone Defense should be on wave 1, but shows "${wave}"`);
+  await shot(page, "lab-5-defense");
+
+  // the suit is remembered next time
+  currentStep = "suit lab remembers the suit";
+  await clickOn(page, "#hud-garage");
+  await open(page, "pages/suitLab/suitLab.html");
+  const plating = await page.locator('[data-part="plating"] .is-picked').getAttribute("data-value");
+  if (plating !== "heavy") fail(`the saved suit was not remembered (plating: ${plating})`);
+
+  await open(page, "pages/suitLab/suitLab.html", PHONE);
+  await wait(1500);
+  await checkCanvases(page, "suit lab phone garage");
+  await shot(page, "lab-phone-garage");
+  await clickOn(page, "#suit-up");
+  await wait(600);
+  await clickOn(page, '[data-mode="free"]');
+  await wait(1000);
+  await checkCanvases(page, "suit lab phone city");
+  await shot(page, "lab-phone-free");
+}
+
 // Strict-autoplay browser: videos may not start, but something must always move,
 // and once you click anywhere the real videos must start.
 async function checkBlockedAutoplay(page: Page) {
@@ -434,8 +525,8 @@ type Run = {
 };
 
 const runs: Run[] = [
-  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame] },
-  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame] },
+  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab] },
+  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab] },
   { name: "autoplay-blocked", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkBlockedAutoplay], blockAutoplay: true },
 ];
 

@@ -340,65 +340,6 @@
   }
 }
 
-/* ---------- Arriving: the second half of the warp from the other pages ---------- */
-
-/* the white surround is a huge shadow around a hole that grows from the middle */
-.iris-hole {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  translate: -50% -50%;
-  box-shadow:
-    0 0 0 150vmax #fff,
-    inset 0 0 40px 12px var(--cyan),
-    0 0 50px 20px var(--cyan);
-  animation: iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards;
-}
-
-/* spinning gold ring riding along the edge of the hole */
-.iris-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  translate: -50% -50%;
-  border: 8px dashed var(--gold);
-  filter: drop-shadow(0 0 10px var(--gold));
-  animation:
-    iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards,
-    spin-ring 1.4s linear infinite;
-}
-
-@keyframes iris-open {
-  to {
-    width: 300vmax;
-    height: 300vmax;
-  }
-}
-
-@keyframes spin-ring {
-  to {
-    rotate: 360deg;
-  }
-}
-
-/* when finished, fade out whatever is left */
-.warp-in {
-  animation: warp-in-done 0.3s 1.35s forwards;
-}
-
-@keyframes warp-in-done {
-  to {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
 /* glowing HUD corner brackets around the play area */
 .stage-frame span {
   position: absolute;

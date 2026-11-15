@@ -25,4 +25,12 @@ const GAMES: GameInfo[] = [
     still: "media/images/games/repulsor-rush.webp",
     bestScoreKey: "repulsor-rush-best",
   },
+  {
+    title: "Suit Lab",
+    tagline: "Build your own armor, then fly it through the city and smash everything!",
+    page: "pages/suitLab/suitLab.html",
+    preview: "media/images/games/suit-lab-preview.webp",
+    still: "media/images/games/suit-lab.webp",
+    bestScoreKey: "suit-lab-best",
+  },
 ];

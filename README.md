@@ -1,6 +1,6 @@
 # Noah's Armory
 
-An Iron Man fan site built for Noah. Three pages, with something moving or reacting on every part of every page:
+An Iron Man fan site built for Noah, with something moving or reacting on every part of every page:
 
 | Page | File | What's there |
 | --- | --- | --- |
@@ -8,6 +8,7 @@ An Iron Man fan site built for Noah. Three pages, with something moving or react
 | Home | `web/pages/home/home.html` | Suit cards, arc reactor to charge, flip cards, history timeline, helmet designer, rocket launch |
 | All Games | `web/pages/games/games.html` | A card for every game, with a moving gameplay preview and your best score |
 | Game | `web/pages/game/game.html` | **Repulsor Rush**: fly above the clouds and blast drones |
+| Game | `web/pages/suitLab/suitLab.html` | **Suit Lab**: build your own suit, then fly it through a city and smash it (Free Fly, Demolition, Drone Defense) |
 
 Every page also has a targeting cursor, a repulsor blast wherever you click, and an expandable photo/video credits list in the footer.
 
@@ -50,6 +51,8 @@ web/
   index.html, style.css, script.ts   landing page
   pages/home/                        home page (.html, .css, .ts)
   pages/game/                        game page: Repulsor Rush (.html, .css, .ts)
+  pages/suitLab/                     game page: Suit Lab (suit.ts = the suit, flight.ts = the
+                                     flying game, suitLab.ts = the garage)
   pages/games/                       All Games page: one card per game
   shared/
     games.ts                         the list of games shown on the All Games page
@@ -85,14 +88,17 @@ Browsers differ, and many quietly refuse things (autoplay, resize events, newer 
 
 ## Adding a new game
 
-The original game (Repulsor Rush, `pages/game/`) stays as it is. Each new game gets its own folder, and a card on the All Games page:
+The original game (Repulsor Rush, `pages/game/`) stays as it is. Each new game gets its own folder, and a card on the All Games page. The warp-in overlay and its styles are shared (see `suitLab.html` for the markup to copy):
 
 1. Build it in `web/pages/<game-name>/` (`<game-name>.html`, `.css`, `.ts`), using the same head, scripts and footer as the other pages.
 2. Compile (`npm run build`), then record its preview from real gameplay:
    ```sh
    node tools/capture-game.ts pages/<game-name>/<game-name>.html <game-name> --start "#start-button" --hide ".game-nav"
    ```
-   This plays the game in a hidden Chrome and saves an animated preview and a still image to `web/media/images/games/`. Options: `--wait` (seconds before recording, e.g. for a countdown), `--seconds` (how much to record), and `--hide` (page parts to keep out of the preview).
+   This plays the game in a hidden Chrome and saves an animated preview and a still image to `web/media/images/games/`. Options: `--start` (what to click; several clicks in order with `"#a | #b"`), `--wait` (seconds before recording, e.g. for a countdown), `--seconds` (how much to record), `--hide` (page parts to keep out of the preview), `--mouse-x` (where the mouse circles), `--fire` (hold the mouse button) and `--keys` (keys to hold in turn). Suit Lab's preview was made with:
+   ```sh
+   node tools/capture-game.ts pages/suitLab/suitLab.html suit-lab --start '[data-part=weapon] [data-value=missiles] | #suit-up | [data-mode=demolition]' --wait 2.5 --seconds 6 --mouse-x 0.66 --fire --keys "d" --hide ".controls-hint"
+   ```
 3. Add an entry to `web/shared/games.ts` with its title, tagline, page, preview, still, and (optionally) where it saves its best score.
 
 The card appears automatically. Its moving preview, the hover effects and the warp jump into the game are built in.
@@ -157,7 +163,7 @@ node tests/check-pages.ts https://noaharmor.com   # check the live site
 ```
 
 Tests use Playwright (installed by `npm install`; WebKit once with `npx playwright install webkit`). Each run covers:
-- **Chrome** and **WebKit** (Safari's engine, which DuckDuckGo on Mac uses) at desktop and phone sizes. They click through everything: scanning a suit, overloading the reactor, flipping cards, the helmet designer, the warp into the game, the countdown, playing until game over, and Play again.
+- **Chrome** and **WebKit** (Safari's engine, which DuckDuckGo on Mac uses) at desktop and phone sizes. They click through everything: scanning a suit, overloading the reactor, flipping cards, the helmet designer, the warp into the game, the countdown, playing until game over, and Play again. In Suit Lab they build a suit, fly and fire in Demolition (it must score), start Drone Defense (wave 1 must arrive), and reload to check the suit was remembered.
 - **Autoplay blocked**, set up to behave like DuckDuckGo. Something must still move, the browser's play button must never show, and one click must start the real videos.
 - **Squish checks:** the game's play area is resized mid-game, with and without a window resize, and every canvas must stay in proportion.
 - **Range requests:** videos must be served in pieces (`206`).

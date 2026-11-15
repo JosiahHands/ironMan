@@ -3,17 +3,27 @@
 //
 // Usage:
 //   tsc -p web                                         (compile the site first)
-//   node tools/capture-game.ts <game page> <name> [--start "#start-button"] [--wait 3.5] [--seconds 5] [--hide ".game-nav"]
+//   node tools/capture-game.ts <game page> <name> [options]
 //
-// Example:
+// Options:
+//   --start "#start-button"   what to click to start; several clicks in order: "#a | #b | #c"
+//   --wait 3.5                seconds to wait after starting (e.g. for a countdown)
+//   --seconds 5               how much gameplay to record
+//   --hide ".game-nav"        page parts to keep out of the preview
+//   --mouse-x 0.22            where the mouse circles, across the screen (0 = left, 1 = right)
+//   --fire                    hold the mouse button down while recording
+//   --keys "d,w,a,s"          keys to hold, one after another, about 0.8 seconds each
+//
+// Examples:
 //   node tools/capture-game.ts pages/game/game.html repulsor-rush --hide ".game-nav"
+//   node tools/capture-game.ts pages/suitLab/suitLab.html suit-lab --start "#suit-up | [data-mode=demolition]" --wait 2 --mouse-x 0.6 --fire --keys "d,d,w,d,s"
 //
-//   -> web/media/images/games/repulsor-rush-preview.webp  (animated loop)
-//      web/media/images/games/repulsor-rush.webp          (still)
+//   -> web/media/images/games/<name>-preview.webp  (animated loop)
+//      web/media/images/games/<name>.webp          (still)
 //
-// How it works: opens the game page from web/ in a hidden Chrome, clicks the start button,
-// waits --wait seconds (e.g. for a countdown), then flies the mouse around while recording
-// --seconds of play. The recording is turned into images with ImageMagick and ffmpeg.
+// How it works: opens the game page from web/ in a hidden Chrome, clicks the start button(s),
+// waits --wait seconds, then moves the mouse (and keys) around while recording --seconds of
+// play. The recording is turned into images with ImageMagick and ffmpeg.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -38,16 +48,20 @@ function parseArgs(args: string[]) {
   const options: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
-    if (arg.startsWith("--")) options[arg.slice(2)] = args[++i] ?? "";
-    else values.push(arg);
+    if (!arg.startsWith("--")) values.push(arg);
+    // an option takes the next argument as its value, unless it's a flag on its own (like --fire)
+    else if (args[i + 1] === undefined || args[i + 1]!.startsWith("--")) options[arg.slice(2)] = "";
+    else options[arg.slice(2)] = args[++i]!;
   }
   return { values, options };
 }
 
 async function capture(gamePage: string, name: string, options: Record<string, string>) {
-  const startSelector = options.start ?? "#start-button";
+  const startSelectors = (options.start ?? "#start-button").split("|").map((s) => s.trim());
   const waitSeconds = Number(options.wait ?? "3.5");
   const seconds = Number(options.seconds ?? "5");
+  const mouseX = Number(options["mouse-x"] ?? "0.22");
+  const keys = options.keys ? options.keys.split(",").map((k) => k.trim()) : [];
   const workDir = fs.mkdtempSync(path.join(OUT_DIR, ".capture-"));
 
   try {
@@ -62,18 +76,31 @@ async function capture(gamePage: string, name: string, options: Record<string, s
     if (options.hide) {
       await page.addStyleTag({ content: `${options.hide} { visibility: hidden !important; }` });
     }
-    const button = await page.locator(startSelector).first().boundingBox();
-    if (!button) throw new Error(`start button "${startSelector}" not found`);
-    await page.mouse.click(button.x + button.width / 2, button.y + button.height / 2);
+    for (const selector of startSelectors) {
+      await page.locator(selector).first().scrollIntoViewIfNeeded();
+      const button = await page.locator(selector).first().boundingBox();
+      if (!button) throw new Error(`start button "${selector}" not found`);
+      await page.mouse.click(button.x + button.width / 2, button.y + button.height / 2);
+      await wait(800);
+    }
     await wait(waitSeconds * 1000);
     // where the gameplay starts in the recording (plus a moment for things to get going)
     const offset = (Date.now() - recordStart) / 1000 + 1;
 
-    // fly around in a figure-eight so the hero dodges and blasts
+    // move the mouse in a figure-eight so the hero dodges and blasts
+    if (options.fire !== undefined) await page.mouse.down();
+    let heldKey = "";
     const steps = Math.round(seconds * 20) + 10;
     for (let i = 0; i < steps; i++) {
       const t = i / 20;
-      await page.mouse.move(VIEW.width * (0.22 + Math.sin(t * 1.3) * 0.1), VIEW.height * (0.5 + Math.sin(t * 2.6) * 0.3));
+      await page.mouse.move(VIEW.width * (mouseX + Math.sin(t * 1.3) * 0.1), VIEW.height * (0.5 + Math.sin(t * 2.6) * 0.3));
+      // hold each key in --keys for 16 steps (about 0.8 seconds), then the next one
+      const key = keys.length ? keys[Math.floor(i / 16) % keys.length]! : "";
+      if (key !== heldKey) {
+        if (heldKey) await page.keyboard.up(heldKey);
+        if (key) await page.keyboard.down(key);
+        heldKey = key;
+      }
       await wait(50);
     }
     const recording = await page.video()!.path();

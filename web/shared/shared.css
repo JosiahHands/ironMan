@@ -92,6 +92,25 @@ h3 {
   text-shadow: 0 0 24px rgba(255, 201, 74, 0.6);
 }
 
+/* gold light sweeping across the word */
+.shine {
+  background: linear-gradient(100deg, var(--red-hot) 20%, var(--gold) 45%, #fff 50%, var(--gold) 55%, var(--red-hot) 80%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
 /* ---------- Background videos (shared.ts forces them to play) ---------- */
 
 /* never show the browser's own play button or controls on any video */
@@ -426,7 +445,7 @@ body.has-reticle summary {
   }
 }
 
-/* ---------- Warp jump into the game (leaving half; the game page has the arriving half) ---------- */
+/* ---------- Warp jump into a game (leaving half) ---------- */
 
 .warp {
   position: fixed;
@@ -557,6 +576,65 @@ body > .warp-zoom {
 @keyframes flash-grow {
   to {
     scale: 220;
+  }
+}
+
+/* ---------- Warp arriving half: on the game pages (warp-in overlay, played by playWarpStreaks) ---------- */
+
+/* the white surround is a huge shadow around a hole that grows from the middle */
+.iris-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  translate: -50% -50%;
+  box-shadow:
+    0 0 0 150vmax #fff,
+    inset 0 0 40px 12px var(--cyan),
+    0 0 50px 20px var(--cyan);
+  animation: iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards;
+}
+
+/* spinning gold ring riding along the edge of the hole */
+.iris-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  translate: -50% -50%;
+  border: 8px dashed var(--gold);
+  filter: drop-shadow(0 0 10px var(--gold));
+  animation:
+    iris-open 1.15s 0.2s cubic-bezier(0.7, 0, 0.2, 1) forwards,
+    spin-ring 1.4s linear infinite;
+}
+
+@keyframes iris-open {
+  to {
+    width: 300vmax;
+    height: 300vmax;
+  }
+}
+
+@keyframes spin-ring {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* when finished, fade out whatever is left */
+.warp-in {
+  animation: warp-in-done 0.3s 1.35s forwards;
+}
+
+@keyframes warp-in-done {
+  to {
+    opacity: 0;
+    visibility: hidden;
   }
 }
 

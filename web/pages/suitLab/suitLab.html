@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Noah's Armory | Suit Lab</title>
+    <link rel="icon" href="../../media/images/favicon.svg" type="image/svg+xml" />
+    <!-- load the fonts right away so text never shows up in the wrong font -->
+    <link rel="preload" href="../../media/fonts/orbitron-500-900.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../../shared/shared.css" />
+    <link rel="stylesheet" href="suitLab.css" />
+    <script defer src="../../dist/shared/credits.js"></script>
+    <script defer src="../../dist/shared/shared.js"></script>
+    <script defer src="../../dist/pages/suitLab/suit.js"></script>
+    <script defer src="../../dist/pages/suitLab/flight.js"></script>
+    <script defer src="../../dist/pages/suitLab/suitLab.js"></script>
+  </head>
+  <!-- "intro" plays the arriving half of the warp; data-phase is set by suitLab.ts -->
+  <body class="lab-page intro" data-phase="garage">
+    <div class="warp warp-in" id="warp-in" aria-hidden="true">
+      <canvas id="warp-canvas"></canvas>
+      <div class="iris-hole"></div>
+      <div class="iris-ring"></div>
+    </div>
+
+    <div class="lab-bg" aria-hidden="true"></div>
+
+    <header class="lab-nav">
+      <a class="brand" href="../../index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
+      <a class="btn btn-ghost" href="../games/games.html">← All games</a>
+    </header>
+
+    <!-- ===================== The garage: build your suit ===================== -->
+    <section class="garage" id="garage">
+      <div class="garage-head">
+        <p class="kicker" data-type="SUIT LAB // DESIGN YOUR ARMOR"></p>
+        <h1>Build your <span class="shine">suit</span></h1>
+      </div>
+
+      <div class="garage-grid">
+        <div class="bay">
+          <div class="bay-screen">
+            <canvas id="suit-preview"></canvas>
+            <span class="bay-corner"></span><span class="bay-corner"></span><span class="bay-corner"></span><span class="bay-corner"></span>
+          </div>
+          <p class="bay-name" id="bay-name">MARK NOAH-1</p>
+          <div class="stats">
+            <div class="stat"><span>SPEED</span><i><b id="stat-speed"></b></i></div>
+            <div class="stat"><span>SHIELDS</span><i><b id="stat-shields"></b></i></div>
+            <div class="stat"><span>HANDLING</span><i><b id="stat-handling"></b></i></div>
+            <div class="stat"><span>FIREPOWER</span><i><b id="stat-firepower"></b></i></div>
+          </div>
+        </div>
+
+        <div class="parts">
+          <label class="part name-part">
+            <h3>Suit name</h3>
+            <input id="suit-name" maxlength="18" autocomplete="off" spellcheck="false" />
+          </label>
+
+          <div class="part">
+            <h3>Armor color</h3>
+            <div class="swatches" data-part="armor">
+              <button data-value="#c81d16" style="--c: #c81d16" aria-label="Red"></button>
+              <button data-value="#e0a526" style="--c: #e0a526" aria-label="Gold"></button>
+              <button data-value="#9aa6b8" style="--c: #9aa6b8" aria-label="Silver"></button>
+              <button data-value="#20232e" style="--c: #20232e" aria-label="Black"></button>
+              <button data-value="#1f5fd1" style="--c: #1f5fd1" aria-label="Blue"></button>
+              <button data-value="#1f9d55" style="--c: #1f9d55" aria-label="Green"></button>
+              <button data-value="#7b3fc4" style="--c: #7b3fc4" aria-label="Purple"></button>
+              <button data-value="#e8ecf4" style="--c: #e8ecf4" aria-label="White"></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Trim color</h3>
+            <div class="swatches" data-part="trim">
+              <button data-value="#ffc94a" style="--c: #ffc94a" aria-label="Gold"></button>
+              <button data-value="#d6dde8" style="--c: #d6dde8" aria-label="Silver"></button>
+              <button data-value="#ff3b30" style="--c: #ff3b30" aria-label="Red"></button>
+              <button data-value="#2a2d38" style="--c: #2a2d38" aria-label="Black"></button>
+              <button data-value="#5ee7ff" style="--c: #5ee7ff" aria-label="Cyan"></button>
+              <button data-value="#ff8a3d" style="--c: #ff8a3d" aria-label="Orange"></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Eye &amp; reactor glow</h3>
+            <div class="swatches" data-part="eyes">
+              <button data-value="#5ee7ff" style="--c: #5ee7ff" aria-label="Cyan"></button>
+              <button data-value="#ffffff" style="--c: #ffffff" aria-label="White"></button>
+              <button data-value="#ff3b30" style="--c: #ff3b30" aria-label="Red"></button>
+              <button data-value="#6dff8a" style="--c: #6dff8a" aria-label="Green"></button>
+              <button data-value="#c08bff" style="--c: #c08bff" aria-label="Purple"></button>
+              <button data-value="#ffd76a" style="--c: #ffd76a" aria-label="Gold"></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Helmet</h3>
+            <div class="choices" data-part="helmet">
+              <button data-value="classic"><b>Classic</b><span>The famous face plate</span></button>
+              <button data-value="stealth"><b>Stealth</b><span>Dark helmet, one wide visor</span></button>
+              <button data-value="spartan"><b>Spartan</b><span>Crest and T-shaped visor</span></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Armor plating</h3>
+            <div class="choices" data-part="plating">
+              <button data-value="light"><b>Light</b><span>Fast, but only 3 shields</span></button>
+              <button data-value="standard"><b>Standard</b><span>5 shields, good at everything</span></button>
+              <button data-value="heavy"><b>Heavy</b><span>Slow, 8 shields, smashes walls</span></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Thrusters</h3>
+            <div class="choices" data-part="thrusters">
+              <button data-value="standard"><b>Standard</b><span>Steady and easy to steer</span></button>
+              <button data-value="turbo"><b>Turbo</b><span>Super fast, but drifts</span></button>
+              <button data-value="hover"><b>Hover</b><span>Slower, stops on a dime</span></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Main weapon</h3>
+            <div class="choices" data-part="weapon">
+              <button data-value="repulsors"><b>Repulsors</b><span>Rapid-fire blasts</span></button>
+              <button data-value="missiles"><b>Missiles</b><span>Slower, but BIG explosions</span></button>
+              <button data-value="laser"><b>Laser</b><span>Melts whatever it touches</span></button>
+            </div>
+          </div>
+
+          <div class="part">
+            <h3>Special move <small>(SPACE when charged)</small></h3>
+            <div class="choices" data-part="special">
+              <button data-value="unibeam"><b>Unibeam</b><span>Giant beam from your chest</span></button>
+              <button data-value="shockwave"><b>Shockwave</b><span>Blast everything around you</span></button>
+              <button data-value="swarm"><b>Missile swarm</b><span>12 missiles at once</span></button>
+            </div>
+          </div>
+
+          <div class="garage-buttons">
+            <button class="btn btn-ghost" id="random-suit">🎲 Random suit</button>
+            <button class="btn btn-red" id="suit-up">▶ Suit up!</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Flying: the city ===================== -->
+    <main class="stage" id="stage">
+      <canvas id="world"></canvas>
+
+      <!-- pick a mode -->
+      <div class="overlay modes-screen">
+        <div class="overlay-box">
+          <p class="kicker">CHOOSE YOUR MISSION</p>
+          <h1><span id="modes-suit-name">MARK NOAH-1</span> <span class="gold">READY</span></h1>
+          <div class="mode-cards">
+            <button class="mode-card" data-mode="free">
+              <span class="mode-icon">🌆</span>
+              <b>Free Fly</b>
+              <span>No timer, no danger. Smash anything you like!</span>
+            </button>
+            <button class="mode-card" data-mode="demolition">
+              <span class="mode-icon">💥</span>
+              <b>Demolition</b>
+              <span>90 seconds. Wreck as much as you can. Fast hits = combos!</span>
+              <em>BEST: <span id="best-demolition">0</span></em>
+            </button>
+            <button class="mode-card" data-mode="defense">
+              <span class="mode-icon">🛡️</span>
+              <b>Drone Defense</b>
+              <span>Waves of drones that shoot back. How long can you last?</span>
+              <em>BEST WAVE: <span id="best-defense">0</span></em>
+            </button>
+          </div>
+          <button class="btn btn-ghost" id="modes-garage">◀ Back to the garage</button>
+        </div>
+      </div>
+
+      <!-- HUD while flying -->
+      <div class="flight-hud">
+        <div class="hud-buttons">
+          <button class="hud-button" id="hud-garage">◀ Garage</button>
+          <button class="hud-button" id="hud-modes">Modes</button>
+        </div>
+        <div class="hud-boxes">
+          <div class="hud-box"><span class="hud-label" id="score-label">SCORE</span><span class="hud-value" id="hud-score">0</span></div>
+          <div class="hud-box" id="timer-box"><span class="hud-label" id="timer-label">TIME</span><span class="hud-value" id="hud-timer">90</span></div>
+          <div class="hud-box" id="shields-box"><span class="hud-label">SHIELDS</span><span class="hud-value shields" id="hud-shields">♥♥♥</span></div>
+        </div>
+        <div class="combo" id="combo">COMBO x2</div>
+      </div>
+      <div class="flight-bottom">
+        <button class="special-meter" id="special-button" aria-label="Fire your special move">
+          <span class="special-fill" id="special-fill"></span>
+          <span class="special-text" id="special-text">UNIBEAM</span>
+        </button>
+        <button class="hud-button" id="rebuild-button">↻ Rebuild city</button>
+      </div>
+      <p class="controls-hint" id="controls-hint">
+        <span class="for-mouse"><b>WASD / arrows</b> fly · <b>mouse</b> aim · <b>hold click</b> fire · <b>SPACE</b> special</span>
+        <span class="for-touch"><b>Hold your finger</b> where you want to fly. Your suit aims and fires by itself!</span>
+      </p>
+      <div class="flight-banner" id="flight-banner"></div>
+
+      <!-- mission report (Demolition and Drone Defense) -->
+      <div class="overlay report-screen">
+        <div class="overlay-box">
+          <p class="kicker">MISSION REPORT</p>
+          <h1 id="report-title">TIME'S <span class="gold">UP!</span></h1>
+          <p class="report-text" id="report-text"></p>
+          <p class="report-best" id="report-best"></p>
+          <div class="report-buttons">
+            <button class="btn btn-red" id="again-button">▶ Play again</button>
+            <button class="btn btn-ghost" id="report-modes">Change mode</button>
+            <button class="btn btn-ghost" id="report-garage">Garage</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p class="made-for">BUILT FOR NOAH <span class="heart">♥</span></p>
+      <details class="credits">
+        <summary>Photo &amp; video credits</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+      <p class="signature">
+        <strong>BUILT BY JOSIAH HANDS</strong><br />
+        <a href="mailto:josiahwhands@gmail.com">josiahwhands@gmail.com</a>
+      </p>
+    </footer>
+  </body>
+</html>
