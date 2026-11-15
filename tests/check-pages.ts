@@ -262,6 +262,49 @@ async function checkWarp(page: Page) {
   await checkMedia(page);
 }
 
+async function checkGamesPage(page: Page) {
+  console.log(`All Games page (${runName})`);
+
+  // the nav buttons on landing and home lead here
+  await open(page, "index.html");
+  await clickOn(page, ".topbar-games");
+  await page.waitForURL(/games/, { timeout: 15000 });
+  await open(page, "pages/home/home.html");
+  await clickOn(page, ".nav-games");
+  await page.waitForURL(/games/, { timeout: 15000 });
+
+  await open(page, "pages/games/games.html");
+  await wait(2500); // cards fly in, moving preview loads
+  await checkMedia(page);
+  // GAMES is the page's list of games (shared/games.ts); read as text since it isn't on window
+  const listed = (await page.evaluate("GAMES.length")) as number;
+  const cards = await page.evaluate(() => ({
+    shown: document.querySelectorAll(".game-card").length,
+    previews: [...document.querySelectorAll<HTMLImageElement>(".game-card img")].map((img) => img.src.split("/").pop()),
+  }));
+  if (cards.shown !== listed) fail(`expected ${listed} game card(s), found ${cards.shown}`);
+  cards.previews.forEach((src) => {
+    if (!src?.endsWith("-preview.webp")) fail(`card is not showing its moving preview (showing ${src})`);
+  });
+  await shot(page, "games-1-page");
+
+  const card = await page.locator(".game-card").first().boundingBox();
+  await page.mouse.move(card!.x + card!.width * 0.7, card!.y + card!.height * 0.3);
+  await wait(500);
+  await shot(page, "games-2-card-hover");
+
+  // clicking a card warps into the game
+  await clickOn(page, ".game-card");
+  await wait(550);
+  await shot(page, "games-3-warp");
+  currentStep = "games page card -> game";
+  await page.waitForURL(/pages\/game\/game/, { timeout: 15000 });
+
+  await open(page, "pages/games/games.html", PHONE);
+  await wait(1500);
+  await shot(page, "games-phone");
+}
+
 async function checkGame(page: Page) {
   console.log(`Game page (${runName})`);
   await open(page, "pages/game/game.html");
@@ -391,8 +434,8 @@ type Run = {
 };
 
 const runs: Run[] = [
-  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGame] },
-  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGame] },
+  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame] },
+  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame] },
   { name: "autoplay-blocked", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkBlockedAutoplay], blockAutoplay: true },
 ];
 

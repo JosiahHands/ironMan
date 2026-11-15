@@ -1,0 +1,298 @@
+/* =========================================================================
+   All Games page
+   ========================================================================= */
+
+.games-page {
+  min-height: calc(var(--vh) * 100);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Moving background ---------- */
+
+.games-bg {
+  position: fixed;
+  inset: -10%;
+  z-index: -2;
+  background: url("../../media/images/circuit.webp") center / cover;
+  opacity: 0.2;
+  animation: games-drift 36s ease-in-out infinite alternate;
+}
+
+@keyframes games-drift {
+  to {
+    transform: translate(-4%, 3%) scale(1.08);
+  }
+}
+
+.games-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(94, 231, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 50% 110%, rgba(215, 38, 30, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(5, 7, 15, 0.55), var(--bg) 95%);
+  animation: glow-pulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes glow-pulse {
+  to {
+    opacity: 0.7;
+  }
+}
+
+/* ---------- Top bar ---------- */
+
+.games-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--line);
+  background: rgba(5, 7, 15, 0.7);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.games-topbar .btn {
+  padding: 0.6em 1.2em;
+}
+
+/* ---------- Heading ---------- */
+
+.games-main {
+  flex: 1;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+.games-head {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.games-head .kicker {
+  min-height: 1.2em;
+}
+
+.games-head h1 {
+  font-size: clamp(2.6rem, 8vw, 5rem);
+  font-weight: 900;
+  animation: head-in 0.9s cubic-bezier(0.2, 0.9, 0.2, 1.1) both;
+}
+
+@keyframes head-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+    letter-spacing: 0.3em;
+  }
+}
+
+/* gold light sweeping across the word */
+.shine {
+  background: linear-gradient(100deg, var(--red-hot) 20%, var(--gold) 45%, #fff 50%, var(--gold) 55%, var(--red-hot) 80%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.games-sub {
+  color: var(--muted);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+/* ---------- Game cards ---------- */
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 560px));
+  justify-content: center;
+  gap: 2rem;
+}
+
+.game-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.15s, border-color 0.3s, box-shadow 0.3s;
+  /* cards fly in one after another (--i is set by games.ts) */
+  animation: card-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: calc(0.4s + var(--i) * 0.15s);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    translate: 0 60px;
+    scale: 0.9;
+  }
+}
+
+.game-card:hover {
+  border-color: var(--gold);
+  box-shadow: 0 25px 60px rgba(255, 201, 74, 0.25), 0 0 40px rgba(94, 231, 255, 0.2);
+}
+
+/* light glare that follows the mouse */
+.game-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.2), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.game-card:hover::after {
+  opacity: 1;
+}
+
+.game-preview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+}
+
+.game-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s, filter 0.6s;
+}
+
+.game-card:hover .game-preview img {
+  transform: scale(1.06);
+  filter: brightness(1.15) saturate(1.2);
+}
+
+/* HUD brackets in the preview's corners (they pull in on hover) */
+.game-preview .hud-corner {
+  position: absolute;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--cyan);
+  filter: drop-shadow(0 0 6px var(--cyan));
+  transition: inset 0.3s, width 0.3s, height 0.3s;
+}
+
+.game-preview .tl { top: 12px; left: 12px; border-right: 0; border-bottom: 0; }
+.game-preview .tr { top: 12px; right: 12px; border-left: 0; border-bottom: 0; }
+.game-preview .bl { bottom: 12px; left: 12px; border-right: 0; border-top: 0; }
+.game-preview .br { bottom: 12px; right: 12px; border-left: 0; border-top: 0; }
+
+.game-card:hover .hud-corner {
+  width: 40px;
+  height: 40px;
+}
+
+.game-card:hover .tl { top: 20px; left: 20px; }
+.game-card:hover .tr { top: 20px; right: 20px; }
+.game-card:hover .bl { bottom: 20px; left: 20px; }
+.game-card:hover .br { bottom: 20px; right: 20px; }
+
+/* a scan line that keeps sweeping down the preview */
+.game-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 14px 3px var(--cyan);
+  opacity: 0.7;
+  animation: preview-scan 3.2s ease-in-out infinite;
+}
+
+@keyframes preview-scan {
+  0%,
+  100% {
+    top: 0;
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 0.7;
+  }
+  50% {
+    top: 100%;
+  }
+}
+
+.game-info {
+  padding: 1.3rem 1.5rem 1.5rem;
+}
+
+.game-info h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 900;
+  margin-bottom: 0.4rem;
+}
+
+.game-info p {
+  margin: 0 0 1.2rem;
+  color: #d9e1f5;
+  font-size: 1.15rem;
+}
+
+.game-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.game-best {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 201, 74, 0.5);
+}
+
+/* looks like the site's red button, pulses on hover */
+.game-play {
+  padding: 0.7em 1.4em;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--red-hot), var(--red));
+  box-shadow: 0 0 20px rgba(255, 59, 48, 0.5);
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+
+.game-card:hover .game-play {
+  transform: scale(1.08);
+  box-shadow: 0 0 40px rgba(255, 59, 48, 0.9);
+  animation: btn-pulse 1s ease-in-out infinite;
+}

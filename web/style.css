@@ -270,10 +270,6 @@
 /* ---------- Small screens ---------- */
 
 @media (max-width: 700px) {
-  .topbar-links a:not(.btn) {
-    display: none;
-  }
-
   .brand {
     font-size: 0.8rem;
   }

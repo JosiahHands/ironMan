@@ -6,6 +6,7 @@ An Iron Man fan site built for Noah. Three pages, with something moving or react
 | --- | --- | --- |
 | Landing | `web/index.html` | Spinning network globe, glowing "Enter the Armory" button, count-up stats |
 | Home | `web/pages/home/home.html` | Suit cards, arc reactor to charge, flip cards, history timeline, helmet designer, rocket launch |
+| All Games | `web/pages/games/games.html` | A card for every game, with a moving gameplay preview and your best score |
 | Game | `web/pages/game/game.html` | **Repulsor Rush**: fly above the clouds and blast drones |
 
 Every page also has a targeting cursor, a repulsor blast wherever you click, and an expandable photo/video credits list in the footer.
@@ -48,8 +49,10 @@ Cloudflare serves pages without `.html` (for example `/pages/home/home`). Links 
 web/
   index.html, style.css, script.ts   landing page
   pages/home/                        home page (.html, .css, .ts)
-  pages/game/                        game page (.html, .css, .ts)
+  pages/game/                        game page: Repulsor Rush (.html, .css, .ts)
+  pages/games/                       All Games page: one card per game
   shared/
+    games.ts                         the list of games shown on the All Games page
     shared.css                       colors, fonts, buttons, cursor, footer
     shared.ts                        cursor, click blasts, scroll effects, credits list,
                                      forced video playback, canvas sizing, real screen height
@@ -57,6 +60,7 @@ web/
   media/
     media-raw/                       original downloads (not used by the pages)
     images/                          edited photos (.webp)
+    images/games/                    game previews for the All Games page (from capture-game.ts)
     videos/                          edited clips (.mp4), poster frames (.webp),
                                      animated copies (-anim.webp) for browsers that block video
     fonts/                           Orbitron + Rajdhani
@@ -78,6 +82,20 @@ Browsers differ, and many quietly refuse things (autoplay, resize events, newer 
 - **Canvases** use `keepCanvasSized()`, which watches the canvas's own box (not just the window) and re-checks every frame, so drawings never stretch or squish.
 - **Screen height** comes from `--vh`, measured in JavaScript, instead of `100vh`, which varies between browsers.
 - **Fonts** are preloaded and never shown in a fallback font. Safari prefixes are included, and the code avoids drawing features older Safari lacks.
+
+## Adding a new game
+
+The original game (Repulsor Rush, `pages/game/`) stays as it is. Each new game gets its own folder, and a card on the All Games page:
+
+1. Build it in `web/pages/<game-name>/` (`<game-name>.html`, `.css`, `.ts`), using the same head, scripts and footer as the other pages.
+2. Compile (`npm run build`), then record its preview from real gameplay:
+   ```sh
+   node tools/capture-game.ts pages/<game-name>/<game-name>.html <game-name> --start "#start-button" --hide ".game-nav"
+   ```
+   This plays the game in a hidden Chrome and saves an animated preview and a still image to `web/media/images/games/`. Options: `--wait` (seconds before recording, e.g. for a countdown), `--seconds` (how much to record), and `--hide` (page parts to keep out of the preview).
+3. Add an entry to `web/shared/games.ts` with its title, tagline, page, preview, still, and (optionally) where it saves its best score.
+
+The card appears automatically. Its moving preview, the hover effects and the warp jump into the game are built in.
 
 ## Media tools
 

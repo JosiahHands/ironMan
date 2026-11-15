@@ -31,6 +31,16 @@ function setupViewportHeight() {
     window.addEventListener("orientationchange", update);
     window.visualViewport?.addEventListener("resize", update);
 }
+// ---------------------------------------------------------------------------
+// Fonts: browsers only load a font weight once something on the page uses it,
+// so a weight that shows up later (e.g. bold text added by a script) can flash in
+// late. Load every weight up front.
+// ---------------------------------------------------------------------------
+function loadAllFonts() {
+    for (const font of ["900 1em Orbitron", "700 1em Orbitron", "500 1em Rajdhani", "700 1em Rajdhani"]) {
+        document.fonts.load(font).catch(() => { });
+    }
+}
 function keepCanvasSized(canvas, onResize) {
     const ctx = canvas.getContext("2d");
     const size = { width: 0, height: 0 };
@@ -353,19 +363,22 @@ function makeLink(text, url) {
 }
 let isWarping = false;
 function setupGameLinks() {
-    document.querySelectorAll("[data-game-link]").forEach((link) => {
-        link.addEventListener("click", (event) => {
-            event.preventDefault();
-            let x = event.clientX;
-            let y = event.clientY;
-            // a keyboard "click" (Enter key) has no mouse position, so use the middle of the link
-            if (event.detail === 0) {
-                const box = link.getBoundingClientRect();
-                x = box.left + box.width / 2;
-                y = box.top + box.height / 2;
-            }
-            warpTo(link.href, x, y);
-        });
+    // One listener for the whole page, so game links added later (like the cards on the
+    // All Games page) get the warp too
+    document.addEventListener("click", (event) => {
+        const link = event.target.closest("a[data-game-link]");
+        if (!link)
+            return;
+        event.preventDefault();
+        let x = event.clientX;
+        let y = event.clientY;
+        // a keyboard "click" (Enter key) has no mouse position, so use the middle of the link
+        if (event.detail === 0) {
+            const box = link.getBoundingClientRect();
+            x = box.left + box.width / 2;
+            y = box.top + box.height / 2;
+        }
+        warpTo(link.href, x, y);
     });
     // The Back button can bring this page back frozen mid-warp, so undo the warp
     window.addEventListener("pageshow", (event) => {
@@ -454,6 +467,7 @@ function playWarpStreaks(canvas, originX, originY, mode, duration) {
     requestAnimationFrame(frame);
 }
 // ---------------------------------------------------------------------------
+loadAllFonts();
 setupViewportHeight();
 setupVideos();
 setupReticle();

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Noah's Armory | All Games</title>
+    <link rel="icon" href="../../media/images/favicon.svg" type="image/svg+xml" />
+    <!-- load the fonts right away so text never shows up in the wrong font -->
+    <link rel="preload" href="../../media/fonts/orbitron-500-900.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../../shared/shared.css" />
+    <link rel="stylesheet" href="games.css" />
+    <script defer src="../../dist/shared/credits.js"></script>
+    <script defer src="../../dist/shared/games.js"></script>
+    <script defer src="../../dist/shared/shared.js"></script>
+    <script defer src="../../dist/pages/games/games.js"></script>
+  </head>
+  <body class="games-page">
+    <!-- moving background: drifting circuit board + glow -->
+    <div class="games-bg" aria-hidden="true"></div>
+    <div class="games-glow" aria-hidden="true"></div>
+
+    <header class="games-topbar">
+      <a class="brand" href="../../index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
+      <a class="btn btn-ghost" href="../home/home.html">Armory</a>
+    </header>
+
+    <main class="games-main">
+      <section class="games-head">
+        <p class="kicker" data-type="MISSION SELECT // CHOOSE YOUR GAME"></p>
+        <h1>All <span class="shine">Games</span></h1>
+        <p class="games-sub">Pick a mission, Noah. More games are on the way!</p>
+      </section>
+
+      <!-- one card per game, built by games.ts from shared/games.ts -->
+      <div class="game-grid" id="game-grid"></div>
+    </main>
+
+    <footer class="site-footer">
+      <p class="made-for">BUILT FOR NOAH <span class="heart">♥</span></p>
+      <details class="credits">
+        <summary>Photo &amp; video credits</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+      <p class="signature">
+        <strong>BUILT BY JOSIAH HANDS</strong><br />
+        <a href="mailto:josiahwhands@gmail.com">josiahwhands@gmail.com</a>
+      </p>
+    </footer>
+  </body>
+</html>

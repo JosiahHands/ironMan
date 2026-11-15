@@ -34,6 +34,18 @@ function setupViewportHeight() {
 }
 
 // ---------------------------------------------------------------------------
+// Fonts: browsers only load a font weight once something on the page uses it,
+// so a weight that shows up later (e.g. bold text added by a script) can flash in
+// late. Load every weight up front.
+// ---------------------------------------------------------------------------
+
+function loadAllFonts() {
+  for (const font of ["900 1em Orbitron", "700 1em Orbitron", "500 1em Rajdhani", "700 1em Rajdhani"]) {
+    document.fonts.load(font).catch(() => {});
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Canvases that never stretch or squish
 // A canvas has two sizes: its box on the page, and its drawing grid. If they don't
 // match, everything drawn gets stretched. Browsers don't always tell us when the box
@@ -434,19 +446,21 @@ type WarpStreak = { angle: number; distance: number; speed: number; color: strin
 let isWarping = false;
 
 function setupGameLinks() {
-  document.querySelectorAll<HTMLAnchorElement>("[data-game-link]").forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      let x = event.clientX;
-      let y = event.clientY;
-      // a keyboard "click" (Enter key) has no mouse position, so use the middle of the link
-      if (event.detail === 0) {
-        const box = link.getBoundingClientRect();
-        x = box.left + box.width / 2;
-        y = box.top + box.height / 2;
-      }
-      warpTo(link.href, x, y);
-    });
+  // One listener for the whole page, so game links added later (like the cards on the
+  // All Games page) get the warp too
+  document.addEventListener("click", (event) => {
+    const link = (event.target as Element).closest<HTMLAnchorElement>("a[data-game-link]");
+    if (!link) return;
+    event.preventDefault();
+    let x = event.clientX;
+    let y = event.clientY;
+    // a keyboard "click" (Enter key) has no mouse position, so use the middle of the link
+    if (event.detail === 0) {
+      const box = link.getBoundingClientRect();
+      x = box.left + box.width / 2;
+      y = box.top + box.height / 2;
+    }
+    warpTo(link.href, x, y);
   });
 
   // The Back button can bring this page back frozen mid-warp, so undo the warp
@@ -544,6 +558,7 @@ function playWarpStreaks(canvas: HTMLCanvasElement, originX: number, originY: nu
 
 // ---------------------------------------------------------------------------
 
+loadAllFonts();
 setupViewportHeight();
 setupVideos();
 setupReticle();
