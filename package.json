@@ -5,9 +5,10 @@
     "build": "tsc -p web",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "tsc -p web && node tests/check-pages.ts"
+    "test": "tsc -p web && tsc -p worker && tsc -p tests && node tests/check-pages.ts"
   },
   "devDependencies": {
+    "playwright": "^1.65.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.161.0"
   }

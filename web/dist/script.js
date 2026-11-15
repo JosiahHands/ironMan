@@ -3,7 +3,8 @@
 // with glowing energy arcs flying between points. The mouse tilts the globe.
 function startLanding() {
     const canvas = document.getElementById("globe");
-    const ctx = canvas.getContext("2d");
+    // keeps the drawing grid matched to the canvas box, so the globe is never stretched
+    const { ctx, size, sync } = keepCanvasSized(canvas);
     // Spread points evenly over a sphere (the "golden spiral" trick)
     const points = [];
     const pointCount = 700;
@@ -28,13 +29,6 @@ function startLanding() {
         targetTiltX = 0.35 + (event.clientY / window.innerHeight - 0.5) * 0.6;
         extraSpin = (event.clientX / window.innerWidth - 0.5) * 0.01;
     });
-    function resize() {
-        const scale = window.devicePixelRatio || 1;
-        canvas.width = canvas.clientWidth * scale;
-        canvas.height = canvas.clientHeight * scale;
-    }
-    resize();
-    window.addEventListener("resize", resize);
     // Rotate a point on the sphere, then flatten it onto the screen
     function project(p) {
         const cosY = Math.cos(spin);
@@ -45,8 +39,8 @@ function startLanding() {
         const sinX = Math.sin(tiltX);
         const y2 = p.y * cosX - z1 * sinX;
         const z2 = p.y * sinX + z1 * cosX;
-        const radius = canvas.width * 0.36; // leaves room for the arcs that loop outside the globe
-        return { x: canvas.width / 2 + x1 * radius, y: canvas.height / 2 + y2 * radius, depth: z2 };
+        const radius = size.width * 0.36; // leaves room for the arcs that loop outside the globe
+        return { x: size.width / 2 + x1 * radius, y: size.height / 2 + y2 * radius, depth: z2 };
     }
     // A point partway along the arc, lifted off the surface so arcs curve outward
     function arcPoint(arc, t) {
@@ -60,8 +54,9 @@ function startLanding() {
     function draw() {
         spin += 0.003 + extraSpin;
         tiltX += (targetTiltX - tiltX) * 0.05;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const dot = canvas.width / 400;
+        sync(); // final check every frame that the canvas matches its box
+        ctx.clearRect(0, 0, size.width, size.height);
+        const dot = size.width / 400;
         // Dots: front ones are bright gold, back ones are faint red
         for (const p of points) {
             const s = project(p);

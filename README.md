@@ -35,9 +35,10 @@ npx wrangler login   # first time only
 npx wrangler deploy  # or: npm run deploy
 ```
 
-Wrangler reads `wrangler.jsonc`, which does two things:
+Wrangler reads `wrangler.jsonc`, which does three things:
 - Runs `npm run build` first, so the compiled JavaScript is always up to date.
 - Uploads everything in `web/` as a static site, except what `web/.assetsignore` lists: the raw downloads in `media/media-raw/` (one is over Cloudflare's 25 MiB per-file limit), the TypeScript source and the config files.
+- Runs a tiny Worker (`worker/index.ts`) for `/media/videos/*` only. Safari's engine (Safari, and DuckDuckGo on Mac) asks for videos in pieces ("range requests") and won't play them otherwise. Cloudflare's static file serving doesn't answer those, so the Worker does.
 
 Cloudflare serves pages without `.html` (for example `/pages/home/home`). Links ending in `.html` still work because they redirect.
 
@@ -50,23 +51,33 @@ web/
   pages/game/                        game page (.html, .css, .ts)
   shared/
     shared.css                       colors, fonts, buttons, cursor, footer
-    shared.ts                        cursor, click blasts, scroll effects, credits list
+    shared.ts                        cursor, click blasts, scroll effects, credits list,
+                                     forced video playback, canvas sizing, real screen height
     credits.ts                       auto-generated list of media credits
   media/
     media-raw/                       original downloads (not used by the pages)
     images/                          edited photos (.webp)
-    videos/                          edited clips (.mp4) + poster frames (.webp)
+    videos/                          edited clips (.mp4), poster frames (.webp),
+                                     animated copies (-anim.webp) for browsers that block video
     fonts/                           Orbitron + Rajdhani
     credits.json                     who made each photo/video
   dist/                              compiled JavaScript (made by tsc)
   .assetsignore                      files in web/ that are NOT uploaded to Cloudflare
+worker/                              Cloudflare Worker that serves videos in pieces (range requests)
 tools/                               command-line helpers for media
-tests/                               automated page checks
+tests/                               automated page checks (Chrome + WebKit)
 wrangler.jsonc                       Cloudflare deploy settings
 package.json                         build / dev / deploy / test commands
 ```
 
 Each page loads `shared/credits.js`, then `shared/shared.js`, then its own script, all from `dist/`.
+
+### Rule: never trust the browser
+Browsers differ, and many quietly refuse things (autoplay, resize events, newer CSS). So the site forces what matters and checks it:
+- **Background videos** (`<video data-bg-video data-anim="...">`): they're started in code, retried on any click, tap or key and when you return to the tab, and paused when off screen. The browser's play button is never shown. If a browser refuses to play, an animated-image copy shows instead, because browsers always animate images.
+- **Canvases** use `keepCanvasSized()`, which watches the canvas's own box (not just the window) and re-checks every frame, so drawings never stretch or squish.
+- **Screen height** comes from `--vh`, measured in JavaScript, instead of `100vh`, which varies between browsers.
+- **Fonts** are preloaded and never shown in a fallback font. Safari prefixes are included, and the code avoids drawing features older Safari lacks.
 
 ## Media tools
 
@@ -98,9 +109,14 @@ node tools/edit-media.ts photo web/media/media-raw/helmet-profile.jpg web/media/
 # videos: trim, grade, drop the sound, make a poster frame
 node tools/edit-media.ts video web/media/media-raw/sparks.mp4 web/media/videos/sparks --style hero --length 8
 
+# animated copy of a finished clip, shown when a browser blocks the video
+node tools/edit-media.ts anim web/media/videos/sparks.mp4 web/media/videos/sparks-anim.webp
+
 # compare options side by side
 node tools/edit-media.ts sheet compare.jpg a.webp b.webp c.webp
 ```
+
+When you add a background video, give it `data-bg-video` and a `data-anim` path to its animated copy.
 
 | Style | Look |
 | --- | --- |
@@ -118,14 +134,17 @@ Video options: `--start`, `--length`, `--width` and `--boomerang` (plays forward
 ## Testing
 
 ```sh
-npm test                                          # compile + check the files on disk
-node tests/check-pages.ts http://localhost:8787   # check "npm run dev" while it's running
-node tests/check-pages.ts https://<your-site>     # check the live deployed site
+npm test                                     # compile everything, start wrangler dev, run all checks
+node tests/check-pages.ts https://noaharmor.com   # check the live site
 ```
 
-This opens every page in a hidden Chrome at desktop and phone sizes. It clicks through the interactive parts (scanning a suit, overloading the reactor, flipping cards, the helmet designer, playing the game until game over) and saves screenshots to `tests/screenshots/`.
+Tests use Playwright (installed by `npm install`; WebKit once with `npx playwright install webkit`). Each run covers:
+- **Chrome** and **WebKit** (Safari's engine, which DuckDuckGo on Mac uses) at desktop and phone sizes. They click through everything: scanning a suit, overloading the reactor, flipping cards, the helmet designer, the warp into the game, the countdown, playing until game over, and Play again.
+- **Autoplay blocked**, set up to behave like DuckDuckGo. Something must still move, the browser's play button must never show, and one click must start the real videos.
+- **Squish checks:** the game's play area is resized mid-game, with and without a window resize, and every canvas must stay in proportion.
+- **Range requests:** videos must be served in pieces (`206`).
 
-It fails if it finds JavaScript errors, files that didn't load, broken images or videos, or fonts that didn't load.
+Screenshots go to `tests/screenshots/<browser>/`. The run fails on JavaScript errors, files that didn't load, broken images or fonts, videos that don't play (or show no moving fallback), stretched canvases, or missing range support.
 
 ## Credits
 

@@ -4,7 +4,7 @@
 // Media folders (inside web/media/):
 //   media-raw/  original downloads from fetch-media.ts (input)
 //   images/     edited photos (.webp)
-//   videos/     edited clips (.mp4) + their poster frames (.webp)
+//   videos/     edited clips (.mp4) + poster frames (.webp) + animated copies (-anim.webp)
 //   fonts/      local web fonts
 //
 // Example:
@@ -18,6 +18,9 @@
 //                                                      [--width 1280] [--boomerang]
 //       Trim, resize, color grade, remove sound -> out-name.mp4 + out-name.webp (poster frame)
 //       --boomerang plays the clip forward then backward, so it loops with no jump
+//
+//   node tools/edit-media.ts anim <in.mp4> <out.webp> [--width 960] [--fps 15] [--quality 55]
+//       Animated image copy of a finished clip. Shown when a browser refuses to autoplay the video.
 //
 //   node tools/edit-media.ts sheet <out.jpg> <images...>
 //       Contact sheet of numbered thumbnails, for choosing between options
@@ -209,11 +212,35 @@ function contactSheet(output: string, inputs: string[]) {
 }
 
 // ---------------------------------------------------------------------------
+// Animated image copy of a video
+// Browsers can refuse to autoplay a video, but they always animate an image.
+// The site shows this when a background video won't start on its own.
+// ---------------------------------------------------------------------------
+
+function animatedCopy(input: string, output: string, options: Record<string, string>) {
+  const width = options.width ?? "960";
+  const fps = options.fps ?? "15";
+  const quality = options.quality ?? "55";
+  const frameDir = fs.mkdtempSync(path.join(path.dirname(output), ".frames-"));
+
+  try {
+    // pull out the frames (smaller and fewer than the video), then join them into one looping .webp
+    run("ffmpeg", ["-y", "-i", input, "-vf", `fps=${fps},scale=${width}:-2`, path.join(frameDir, "f%04d.png")]);
+    const frames = fs.readdirSync(frameDir).sort().map((name) => path.join(frameDir, name));
+    run("magick", ["-delay", `1x${fps}`, "-loop", "0", ...frames, "-quality", quality, "-define", "webp:method=4", output]);
+  } finally {
+    fs.rmSync(frameDir, { recursive: true, force: true });
+  }
+  console.log(`Saved ${output} (animated, ${sizeOf(output)})`);
+}
+
+// ---------------------------------------------------------------------------
 
 function usage(): never {
   console.log(`Usage:
   node tools/edit-media.ts photo <in> <out.webp> [--style none|hero|duotone|hud|comic|glow] [--width 1600]
   node tools/edit-media.ts video <in.mp4> <out-name> [--style none|hero|hud] [--start 0] [--length 6] [--width 1280] [--boomerang]
+  node tools/edit-media.ts anim  <in.mp4> <out.webp> [--width 960] [--fps 15] [--quality 55]
   node tools/edit-media.ts sheet <out.jpg> <images...>`);
   process.exit(1);
 }
@@ -224,6 +251,7 @@ const { values, options } = parseArgs(rest);
 try {
   if (command === "photo" && values[0] && values[1]) editPhoto(values[0], values[1], options);
   else if (command === "video" && values[0] && values[1]) editVideo(values[0], values[1], options);
+  else if (command === "anim" && values[0] && values[1]) animatedCopy(values[0], values[1], options);
   else if (command === "sheet" && values[0] && values.length > 1) contactSheet(values[0], values.slice(1));
   else usage();
 } catch (error) {

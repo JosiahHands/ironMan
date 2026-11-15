@@ -1,5 +1,4 @@
 // Cloudflare deploy settings: "npx wrangler deploy" publishes the site.
-// The site is plain static files in web/, so no Worker code is needed.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ironman", // must match the Worker name in the Cloudflare dashboard
@@ -10,8 +9,14 @@
     "command": "npm run build"
   },
 
-  // Everything in web/ is uploaded, except what web/.assetsignore lists
+  // A tiny Worker that serves videos in pieces so Safari-engine browsers can play them
+  "main": "worker/index.ts",
+
+  // Everything in web/ is served as static files, except what web/.assetsignore lists
   "assets": {
-    "directory": "./web"
+    "directory": "./web",
+    "binding": "ASSETS",
+    // only video requests go through the Worker first; everything else skips it
+    "run_worker_first": ["/media/videos/*"]
   }
 }

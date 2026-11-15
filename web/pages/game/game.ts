@@ -86,16 +86,22 @@ function startGame() {
 
   // ----- setup -----
 
-  function resize() {
-    const ratio = window.devicePixelRatio || 1;
-    width = stage.clientWidth;
-    height = stage.clientHeight;
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  // Keep the drawing grid matched to the play area's real size, so the hero is never
+  // stretched or squished (shared/shared.ts watches the canvas box for any change)
+  const gameCanvas = keepCanvasSized(canvas, (size) => {
+    width = size.width;
+    height = size.height;
+  });
+
+  // Rounded rectangle drawn by hand (ctx.roundRect doesn't exist in older Safari)
+  function roundedRect(x: number, y: number, w: number, h: number, r: number) {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
-  resize();
-  window.addEventListener("resize", resize);
 
   // speed lines that rush past to make it feel fast
   for (let i = 0; i < 40; i++) {
@@ -606,18 +612,18 @@ function startGame() {
     ctx.strokeStyle = "#5a0b08";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(-36, 0, 34, 14, 6);
+    roundedRect(-36, 0, 34, 14, 6);
     ctx.fill();
     ctx.stroke();
     ctx.beginPath();
-    ctx.roundRect(-6, -14, 30, 28, 10);
+    roundedRect(-6, -14, 30, 28, 10);
     ctx.fill();
     ctx.stroke();
 
     // gold arm reaching forward
     ctx.fillStyle = "#ffc94a";
     ctx.beginPath();
-    ctx.roundRect(12, 2, 26, 9, 4);
+    roundedRect(12, 2, 26, 9, 4);
     ctx.fill();
 
     // chest reactor
@@ -735,6 +741,7 @@ function startGame() {
     // dt = how many 60fps frames passed (capped so a slow frame can't teleport things)
     const dt = Math.min((now - lastTime) / (1000 / 60), 3);
     lastTime = now;
+    gameCanvas.sync(); // final check every frame that the canvas matches the play area
     if (playing) update(dt);
     else if (countingDown) movePlayer(dt); // the hero flies in during the countdown
     draw(dt);

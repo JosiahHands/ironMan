@@ -3,7 +3,8 @@
 
 function startLanding() {
   const canvas = document.getElementById("globe") as HTMLCanvasElement;
-  const ctx = canvas.getContext("2d")!;
+  // keeps the drawing grid matched to the canvas box, so the globe is never stretched
+  const { ctx, size, sync } = keepCanvasSized(canvas);
 
   type Point3D = { x: number; y: number; z: number };
   type Arc = { from: Point3D; to: Point3D; progress: number; speed: number };
@@ -36,14 +37,6 @@ function startLanding() {
     extraSpin = (event.clientX / window.innerWidth - 0.5) * 0.01;
   });
 
-  function resize() {
-    const scale = window.devicePixelRatio || 1;
-    canvas.width = canvas.clientWidth * scale;
-    canvas.height = canvas.clientHeight * scale;
-  }
-  resize();
-  window.addEventListener("resize", resize);
-
   // Rotate a point on the sphere, then flatten it onto the screen
   function project(p: Point3D) {
     const cosY = Math.cos(spin);
@@ -54,8 +47,8 @@ function startLanding() {
     const sinX = Math.sin(tiltX);
     const y2 = p.y * cosX - z1 * sinX;
     const z2 = p.y * sinX + z1 * cosX;
-    const radius = canvas.width * 0.36; // leaves room for the arcs that loop outside the globe
-    return { x: canvas.width / 2 + x1 * radius, y: canvas.height / 2 + y2 * radius, depth: z2 };
+    const radius = size.width * 0.36; // leaves room for the arcs that loop outside the globe
+    return { x: size.width / 2 + x1 * radius, y: size.height / 2 + y2 * radius, depth: z2 };
   }
 
   // A point partway along the arc, lifted off the surface so arcs curve outward
@@ -71,8 +64,9 @@ function startLanding() {
   function draw() {
     spin += 0.003 + extraSpin;
     tiltX += (targetTiltX - tiltX) * 0.05;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const dot = canvas.width / 400;
+    sync(); // final check every frame that the canvas matches its box
+    ctx.clearRect(0, 0, size.width, size.height);
+    const dot = size.width / 400;
 
     // Dots: front ones are bright gold, back ones are faint red
     for (const p of points) {

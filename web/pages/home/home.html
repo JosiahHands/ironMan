@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Noah's Armory | Home</title>
     <link rel="icon" href="../../media/images/favicon.svg" type="image/svg+xml" />
+    <!-- load the fonts right away so text never shows up in the wrong font -->
+    <link rel="preload" href="../../media/fonts/orbitron-500-900.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="../../shared/shared.css" />
     <link rel="stylesheet" href="home.css" />
     <script defer src="../../dist/shared/credits.js"></script>
@@ -30,7 +34,7 @@
 
     <!-- ================= HERO ================= -->
     <section class="hero" id="top">
-      <video class="bg-video" src="../../media/videos/sparks.mp4" poster="../../media/videos/sparks.webp" autoplay muted loop playsinline></video>
+      <video data-bg-video data-anim="../../media/videos/sparks-anim.webp" class="bg-video" src="../../media/videos/sparks.mp4" poster="../../media/videos/sparks.webp" autoplay muted loop playsinline></video>
       <div class="hero-shade"></div>
 
       <div class="hero-grid">
@@ -172,7 +176,7 @@
 
     <!-- ================= ARC REACTOR ================= -->
     <section class="section reactor-section" id="reactor">
-      <video class="bg-video" src="../../media/videos/turbine.mp4" poster="../../media/videos/turbine.webp" autoplay muted loop playsinline></video>
+      <video data-bg-video data-anim="../../media/videos/turbine-anim.webp" class="bg-video" src="../../media/videos/turbine.mp4" poster="../../media/videos/turbine.webp" autoplay muted loop playsinline></video>
       <div class="reactor-shade"></div>
 
       <div class="reactor-layout">
@@ -377,7 +381,7 @@
 
     <!-- ================= LAUNCH ================= -->
     <section class="launch" id="launch">
-      <video class="bg-video" src="../../media/videos/rocket.mp4" poster="../../media/videos/rocket.webp" autoplay muted loop playsinline></video>
+      <video data-bg-video data-anim="../../media/videos/rocket-anim.webp" class="bg-video" src="../../media/videos/rocket.mp4" poster="../../media/videos/rocket.webp" autoplay muted loop playsinline></video>
       <div class="launch-shade"></div>
       <div class="launch-copy" data-reveal>
         <p class="kicker">MISSION CONTROL</p>

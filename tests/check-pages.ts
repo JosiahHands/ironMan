@@ -1,270 +1,422 @@
-// check-pages: open every page in a hidden Chrome, click through the interactive parts,
-// take screenshots and report any problems.
+// check-pages: test every page in real browsers, the way visitors see it.
+//
+//   - starts the site with "wrangler dev" (the same setup as Cloudflare, including the video Worker)
+//   - runs every check in Chrome AND WebKit (Safari's engine, which DuckDuckGo on Mac uses)
+//   - an extra Chrome run with autoplay blocked, like strict browsers, to prove the
+//     backgrounds still move and the browser's play button never shows
 //
 // Usage:
-//   tsc -p web                      (compile the site first)
-//   node tests/check-pages.ts                          test the files on disk
-//   node tests/check-pages.ts http://localhost:8787    test a running server (e.g. "npx wrangler dev")
-//   node tests/check-pages.ts https://your-site.dev    test the live deployed site
+//   tsc -p web                                   (compile the site first; "npm test" does both)
+//   node tests/check-pages.ts                    test locally (starts wrangler dev by itself)
+//   node tests/check-pages.ts https://noaharmor.com   test the live site
 //
-// Screenshots go to tests/screenshots/. The run fails (exit code 1) if it finds:
-//   - JavaScript errors
-//   - files that failed to load (images, videos, scripts, fonts)
-//   - images that are broken, or fonts that didn't load
+// Screenshots go to tests/screenshots/<browser>/. The run fails (exit code 1) if it finds:
+//   JavaScript errors, files that failed to load, broken images/fonts, background videos that
+//   don't play (or show no moving fallback), stretched/squished canvases, or videos served
+//   without range-request support.
 
+import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { openBrowser, wait, type Browser } from "../tools/chrome.ts";
+import { chromium, webkit, type Browser, type Page } from "playwright";
 
 const TESTS_DIR = import.meta.dirname;
-const WEB_DIR = path.join(path.dirname(TESTS_DIR), "web");
+const PROJECT_DIR = path.dirname(TESTS_DIR);
 const SHOTS_DIR = path.join(TESTS_DIR, "screenshots");
+const DEV_PORT = 8790;
 
 const DESKTOP = { width: 1366, height: 900 };
 const PHONE = { width: 390, height: 844 };
 
 const problems: string[] = [];
+let runName = "";
 let currentStep = "";
+let baseUrl = process.argv[2] ?? "";
 
-// Pages come from a web address if one was given, otherwise straight from the files in web/
-const BASE_URL = process.argv[2];
-const pageUrl = (relativePath: string) =>
-  BASE_URL
-    ? new URL(relativePath, BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`).href
-    : pathToFileURL(path.join(WEB_DIR, relativePath)).href;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const fail = (message: string) => problems.push(`[${runName}] [${currentStep}] ${message}`);
+const pageUrl = (relativePath: string) => new URL(relativePath, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).href;
+
+// ---------------------------------------------------------------------------
+// Local server: wrangler dev
+// ---------------------------------------------------------------------------
+
+async function startServer(): Promise<ChildProcess> {
+  const server = spawn("npx", ["wrangler", "dev", "--port", String(DEV_PORT)], { cwd: PROJECT_DIR, stdio: "ignore" });
+  for (let i = 0; i < 180; i++) {
+    await wait(500);
+    const ok = await fetch(`http://localhost:${DEV_PORT}/`).then((r) => r.ok).catch(() => false);
+    if (ok) return server;
+  }
+  server.kill();
+  throw new Error("wrangler dev did not start");
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function watchForProblems(browser: Browser) {
-  browser.on("Runtime.exceptionThrown", (p) => {
-    const details = p.exceptionDetails;
-    problems.push(`[${currentStep}] JS error: ${details.exception?.description ?? details.text}`);
+function watchForProblems(page: Page) {
+  page.on("pageerror", (error) => fail(`JS error: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") fail(`console error: ${message.text()}`);
   });
-  browser.on("Runtime.consoleAPICalled", (p) => {
-    if (p.type === "error") problems.push(`[${currentStep}] console.error: ${p.args.map((a: any) => a.value ?? a.description).join(" ")}`);
+  page.on("requestfailed", (request) => {
+    const reason = request.failure()?.errorText ?? "";
+    // videos that get paused/stopped part-way are normal, not failures
+    if (/ABORTED|cancel/i.test(reason)) return;
+    fail(`failed to load ${request.url()} (${reason})`);
   });
-  browser.on("Log.entryAdded", (p) => {
-    if (p.entry.level === "error") problems.push(`[${currentStep}] ${p.entry.text} ${p.entry.url ?? ""}`);
-  });
-  browser.on("Network.loadingFailed", (p) => {
-    if (p.canceled) return; // e.g. a video the browser chose to stop loading
-    problems.push(`[${currentStep}] failed to load (${p.errorText}) request ${p.requestId}`);
+  page.on("response", (response) => {
+    if (response.status() >= 400) fail(`HTTP ${response.status()} for ${response.url()}`);
   });
 }
 
-async function open(browser: Browser, relativePath: string, size: { width: number; height: number }) {
+async function open(page: Page, relativePath: string, size = DESKTOP) {
   currentStep = `${relativePath} @ ${size.width}px`;
-  await browser.setViewport(size.width, size.height, size.width < 600);
-  await browser.goTo(pageUrl(relativePath));
-  await browser.waitFor(`document.readyState === "complete"`);
-  await browser.evaluate(`document.fonts.ready.then(() => true)`);
-  await wait(1500); // let the entrance animations play
+  await page.setViewportSize(size);
+  await page.goto(pageUrl(relativePath), { waitUntil: "load" });
+  await page.evaluate(() => document.fonts.ready);
+  await wait(1500); // entrance animations
 }
 
-async function shot(browser: Browser, name: string) {
-  await browser.screenshot(path.join(SHOTS_DIR, `${name}.png`));
-  console.log(`  📸 ${name}.png`);
+async function shot(page: Page, name: string) {
+  await page.screenshot({ path: path.join(SHOTS_DIR, runName, `${name}.png`) });
+  console.log(`  📸 ${runName}/${name}.png`);
 }
 
-async function scrollTo(browser: Browser, selector: string) {
-  await browser.evaluate(
-    `document.querySelector(${JSON.stringify(selector)}).scrollIntoView({ behavior: "instant", block: "start" })`
-  );
+async function scrollTo(page: Page, selector: string) {
+  await page.evaluate((sel) => {
+    document.documentElement.style.scrollBehavior = "auto"; // jump, don't glide
+    document.querySelector(sel)!.scrollIntoView({ block: "start" });
+  }, selector);
   await wait(1300); // reveal animations
 }
 
-// Middle of an element on screen, for clicking it
-async function centerOf(browser: Browser, selector: string): Promise<{ x: number; y: number }> {
-  return browser.evaluate(`(() => {
-    const box = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-  })()`);
+// A real mouse click in the middle of an element
+async function clickOn(page: Page, selector: string) {
+  const box = await page.locator(selector).first().boundingBox();
+  if (!box) throw new Error(`can't click ${selector}: not on screen`);
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
-async function clickOn(browser: Browser, selector: string) {
-  const { x, y } = await centerOf(browser, selector);
-  await browser.click(x, y);
+// Broken images and fonts that didn't load
+async function checkMedia(page: Page) {
+  const report = await page.evaluate(() => ({
+    brokenImages: [...document.images].filter((img) => img.complete && img.naturalWidth === 0).map((img) => img.src),
+    missingFonts: ["900 20px Orbitron", "500 20px Rajdhani", "700 20px Rajdhani"].filter((f) => !document.fonts.check(f)),
+  }));
+  report.brokenImages.forEach((src) => fail(`broken image: ${src}`));
+  report.missingFonts.forEach((font) => fail(`font not loaded: ${font}`));
 }
 
-// Broken images, videos that can't play, fonts that didn't load
-async function checkMedia(browser: Browser) {
-  const report = await browser.evaluate(`(() => {
-    const brokenImages = [...document.images].filter(img => img.complete && img.naturalWidth === 0).map(img => img.src);
-    const brokenVideos = [...document.querySelectorAll("video")].filter(v => v.error).map(v => v.src);
-    const fonts = ["900 20px Orbitron", "500 20px Rajdhani", "700 20px Rajdhani"].filter(f => !document.fonts.check(f));
-    return { brokenImages, brokenVideos, fonts };
-  })()`);
-  for (const src of report.brokenImages) problems.push(`[${currentStep}] broken image: ${src}`);
-  for (const src of report.brokenVideos) problems.push(`[${currentStep}] broken video: ${src}`);
-  for (const font of report.fonts) problems.push(`[${currentStep}] font not loaded: ${font}`);
+// Every canvas's drawing grid must match its box, or drawings get stretched/squished
+async function checkCanvases(page: Page, label: string) {
+  const canvases = await page.evaluate(() =>
+    [...document.querySelectorAll("canvas")]
+      .filter((c) => c.clientWidth > 0 && c.clientHeight > 0)
+      .map((c) => ({
+        name: c.id || c.className,
+        gridRatio: c.width / c.height,
+        boxRatio: c.clientWidth / c.clientHeight,
+        gridWidth: c.width,
+        expectedWidth: Math.round(c.clientWidth * (window.devicePixelRatio || 1)),
+      }))
+  );
+  for (const c of canvases) {
+    const stretch = Math.abs(c.gridRatio / c.boxRatio - 1);
+    if (stretch > 0.02 || Math.abs(c.gridWidth - c.expectedWidth) > 2) {
+      fail(`${label}: canvas "${c.name}" is ${(stretch * 100).toFixed(1)}% stretched (grid ${c.gridWidth}px wide, box needs ${c.expectedWidth}px)`);
+    }
+  }
+}
+
+// Background videos on screen must be moving: the real video playing, or (if the browser
+// blocks autoplay) the animated copy showing. The browser's play button must never show.
+async function checkVideos(page: Page, label: string, mustBeRealVideo: boolean) {
+  await wait(2500); // give the video (or the fallback) time to start
+  const videos = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLVideoElement>("video[data-bg-video]")]
+      .filter((v) => {
+        const box = v.getBoundingClientRect();
+        return box.bottom > 0 && box.top < window.innerHeight;
+      })
+      .map((v) => {
+        const fallback = v.previousElementSibling as HTMLElement | null;
+        return {
+          src: v.currentSrc.split("/").pop(),
+          playing: v.classList.contains("is-playing") && !v.paused && v.currentTime > 0,
+          controls: v.controls,
+          videoOpacity: getComputedStyle(v).opacity,
+          animatedFallback: !!fallback?.classList.contains("is-animated"),
+        };
+      })
+  );
+  if (!videos.length) fail(`${label}: expected a background video on screen`);
+  for (const v of videos) {
+    if (v.controls) fail(`${label}: ${v.src} shows the browser's video controls`);
+    if (mustBeRealVideo && !v.playing) fail(`${label}: ${v.src} is not playing`);
+    if (!v.playing && !v.animatedFallback) fail(`${label}: ${v.src} is stuck (no video and no animated fallback)`);
+    if (!v.playing && v.videoOpacity !== "0") fail(`${label}: ${v.src} is not playing but still visible (would show a frozen frame)`);
+  }
+  return videos;
 }
 
 // ---------------------------------------------------------------------------
 // The checks
 // ---------------------------------------------------------------------------
 
-async function checkLanding(browser: Browser) {
-  console.log("Landing page");
-  await open(browser, "index.html", DESKTOP);
-  await checkMedia(browser);
-  await shot(browser, "landing-desktop");
-  await browser.click(1000, 420);
+async function checkRangeRequests() {
+  currentStep = "range requests";
+  const response = await fetch(pageUrl("media/videos/sparks.mp4"), { headers: { Range: "bytes=0-1" } });
+  const body = await response.arrayBuffer();
+  if (response.status !== 206 || body.byteLength !== 2 || !response.headers.get("content-range")) {
+    fail(`videos must answer range requests with 206 + 2 bytes; got ${response.status}, ${body.byteLength} bytes`);
+  } else {
+    console.log("  ✓ videos answer range requests (206)");
+  }
+}
+
+async function checkLanding(page: Page) {
+  console.log(`Landing page (${runName})`);
+  await open(page, "index.html");
+  await checkMedia(page);
+  await checkCanvases(page, "landing");
+  await shot(page, "landing-desktop");
+  await page.mouse.click(1000, 420);
   await wait(150);
-  await shot(browser, "landing-click-blast");
+  await shot(page, "landing-click-blast");
 
-  await open(browser, "index.html", PHONE);
-  await shot(browser, "landing-phone");
+  await open(page, "index.html", PHONE);
+  await checkCanvases(page, "landing phone");
+  await shot(page, "landing-phone");
 }
 
-async function checkHome(browser: Browser) {
-  console.log("Home page");
-  await open(browser, "pages/home/home.html", DESKTOP);
-  await checkMedia(browser);
-  await shot(browser, "home-1-hero");
+async function checkHome(page: Page) {
+  console.log(`Home page (${runName})`);
+  await open(page, "pages/home/home.html");
+  await checkMedia(page);
+  await checkVideos(page, "home hero", true);
+  await shot(page, "home-1-hero");
 
-  await scrollTo(browser, "#suits");
-  const card = await centerOf(browser, ".suit-card");
-  await browser.moveMouse(card.x + 60, card.y - 60);
-  await clickOn(browser, ".suit-card");
+  await scrollTo(page, "#suits");
+  const card = await page.locator(".suit-card").first().boundingBox();
+  await page.mouse.move(card!.x + card!.width / 2 + 60, card!.y + card!.height / 2 - 60);
+  await clickOn(page, ".suit-card");
   await wait(900);
-  await shot(browser, "home-2-suits-scanned");
+  await shot(page, "home-2-suits-scanned");
 
-  await scrollTo(browser, "#reactor");
-  for (let i = 0; i < 10; i++) {
-    await clickOn(browser, "#reactor-button");
-    await wait(40);
-  }
-  await shot(browser, "home-3-reactor-charging");
-  for (let i = 0; i < 8; i++) {
-    await clickOn(browser, "#reactor-button");
+  await scrollTo(page, "#reactor");
+  await checkVideos(page, "home reactor", true);
+  for (let i = 0; i < 18; i++) {
+    await clickOn(page, "#reactor-button");
     await wait(40);
   }
   await wait(250);
-  await shot(browser, "home-4-reactor-overload");
+  await shot(page, "home-3-reactor-overload");
 
-  await scrollTo(browser, "#powers");
-  await clickOn(browser, ".flip-card:nth-child(2)");
+  await scrollTo(page, "#powers");
+  await clickOn(page, ".flip-card:nth-child(2)");
   await wait(1000);
-  await shot(browser, "home-5-powers-flipped");
+  await shot(page, "home-4-powers-flipped");
 
-  await scrollTo(browser, "#history");
-  await browser.evaluate(`window.scrollBy(0, 250)`);
-  await wait(800);
-  await shot(browser, "home-6-history");
+  await scrollTo(page, "#history");
+  await shot(page, "home-5-history");
 
-  await scrollTo(browser, "#lab");
-  await clickOn(browser, "#random-suit");
+  await scrollTo(page, "#lab");
+  await clickOn(page, "#random-suit");
   await wait(700);
-  await shot(browser, "home-7-lab-random");
+  await shot(page, "home-6-lab-random");
 
-  await scrollTo(browser, "#launch");
-  await shot(browser, "home-8-launch");
+  await scrollTo(page, "#launch");
+  await checkVideos(page, "home launch", true);
+  await shot(page, "home-7-launch");
 
-  await browser.evaluate(`document.querySelector(".credits").open = true`);
-  await scrollTo(browser, ".site-footer");
-  await shot(browser, "home-9-credits");
-  await checkMedia(browser);
+  await page.evaluate(() => ((document.querySelector(".credits") as HTMLDetailsElement).open = true));
+  await scrollTo(page, ".site-footer");
+  await shot(page, "home-8-footer");
+  await checkMedia(page);
 
-  await open(browser, "pages/home/home.html", PHONE);
-  await shot(browser, "home-phone-hero");
-  await scrollTo(browser, "#suits");
-  await shot(browser, "home-phone-suits");
-  await scrollTo(browser, ".site-footer");
-  await shot(browser, "home-phone-footer");
+  await open(page, "pages/home/home.html", PHONE);
+  await checkVideos(page, "home phone", true);
+  await shot(page, "home-phone-hero");
 }
 
-// Every game link should warp-jump into the game page
-async function checkWarp(browser: Browser) {
-  console.log("Warp jump into the game");
-  await open(browser, "pages/home/home.html", DESKTOP);
+async function checkWarp(page: Page) {
+  console.log(`Warp jump into the game (${runName})`);
+  await open(page, "pages/home/home.html");
+  const links = await page.locator("[data-game-link]").count();
+  if (links !== 3) fail(`expected 3 game links on home, found ${links}`);
 
-  const links = await browser.evaluate(`document.querySelectorAll("[data-game-link]").length`);
-  if (links !== 3) problems.push(`[${currentStep}] expected 3 game links on home, found ${links}`);
-
-  await clickOn(browser, ".nav-play");
+  await clickOn(page, ".nav-play");
   await wait(550);
-  await shot(browser, "warp-1-leaving");
+  await shot(page, "warp-1-leaving");
 
-  // wait for the game page to open, then catch the arriving half at a few moments
   currentStep = "warp arriving on game page";
-  await browser.waitFor(`location.href.includes("game") && document.readyState === "complete"`, 15);
+  await page.waitForURL(/game/, { timeout: 15000 });
+  await page.waitForLoadState("load");
   await wait(250);
-  await shot(browser, "warp-2-arriving");
-  await wait(500);
-  await shot(browser, "warp-3-iris-opening");
-  await wait(1700);
-  await shot(browser, "warp-4-hud-booted");
-  await checkMedia(browser);
+  await shot(page, "warp-2-arriving");
+  await wait(2200);
+  await shot(page, "warp-3-hud-booted");
+  await checkMedia(page);
 }
 
-async function checkGame(browser: Browser) {
-  console.log("Game page");
-  await open(browser, "pages/game/game.html", DESKTOP);
-  await wait(1500); // the HUD boot-up after the warp
-  await checkMedia(browser);
-  await shot(browser, "game-1-start-screen");
+async function checkGame(page: Page) {
+  console.log(`Game page (${runName})`);
+  await open(page, "pages/game/game.html");
+  await wait(1500); // HUD boot-up after the warp
+  await checkMedia(page);
+  await checkVideos(page, "game sky", true);
+  await checkCanvases(page, "game start screen");
+  await shot(page, "game-1-start-screen");
 
   // the first Start mission gets a countdown
-  await clickOn(browser, "#start-button");
+  await clickOn(page, "#start-button");
   await wait(1000);
-  await shot(browser, "game-2-countdown");
-  if (!(await browser.evaluate(`document.getElementById("countdown").classList.contains("is-on")`))) {
-    problems.push(`[${currentStep}] countdown did not show after Start mission`);
-  }
-  await wait(2600); // rest of 3-2-1-GO
+  if (!(await page.locator("#countdown.is-on").count())) fail("countdown did not show after Start mission");
+  await shot(page, "game-2-countdown");
+  await wait(2600);
 
-  // fly around for a few seconds
-  for (let i = 0; i < 60; i++) {
-    await browser.moveMouse(250 + Math.sin(i / 6) * 150, 450 + Math.cos(i / 4) * 250);
+  // fly around
+  for (let i = 0; i < 30; i++) {
+    await page.mouse.move(250 + Math.sin(i / 6) * 150, 450 + Math.cos(i / 4) * 250);
     await wait(100);
   }
-  await shot(browser, "game-3-playing");
+  await shot(page, "game-3-playing");
 
-  // stay still and let the drones win, to see the game over screen
-  await browser.moveMouse(700, 450);
-  await browser.waitFor(`document.getElementById("screen").classList.contains("is-on")`, 90);
+  // THE SQUISH BUG: the play area changes size without the window resizing
+  // (like a browser toolbar sliding away). The canvas must follow it.
+  currentStep = "game canvas follows play area";
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = "520px"));
+  await wait(300);
+  await checkCanvases(page, "play area shrunk without a window resize");
+  await shot(page, "game-4-play-area-shrunk");
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = ""));
+  await wait(300);
+  await checkCanvases(page, "play area restored");
+
+  // ...and when the window itself changes size mid-game
+  await page.setViewportSize({ width: 1100, height: 640 });
+  await wait(400);
+  await checkCanvases(page, "window resized mid-game");
+  await shot(page, "game-5-window-resized");
+  await page.setViewportSize(DESKTOP);
+  await wait(400);
+  await checkCanvases(page, "window restored mid-game");
+
+  // let the drones win, to see the game over screen
+  currentStep = "game over";
+  await page.mouse.move(700, 450);
+  await page.waitForSelector("#screen.is-on", { timeout: 90000 });
   await wait(800);
-  await shot(browser, "game-4-game-over");
+  await shot(page, "game-6-game-over");
 
   // Play again starts straight away, with no countdown
-  await clickOn(browser, "#start-button");
+  await clickOn(page, "#start-button");
   await wait(300);
-  const replay = await browser.evaluate(`({
-    countdown: document.getElementById("countdown").classList.contains("is-on"),
+  const replay = await page.evaluate(() => ({
+    countdown: document.getElementById("countdown")!.classList.contains("is-on"),
     playing: document.body.classList.contains("is-playing"),
-  })`);
-  if (replay.countdown || !replay.playing) {
-    problems.push(`[${currentStep}] Play again should start right away (countdown: ${replay.countdown}, playing: ${replay.playing})`);
-  }
-  await shot(browser, "game-5-play-again");
+  }));
+  if (replay.countdown || !replay.playing) fail(`Play again should start right away (countdown: ${replay.countdown}, playing: ${replay.playing})`);
 
-  await browser.evaluate(`document.querySelector(".credits").open = true`);
-  await scrollTo(browser, ".site-footer");
-  await shot(browser, "game-6-footer");
+  await open(page, "pages/game/game.html", PHONE);
+  await wait(1500);
+  await checkCanvases(page, "game phone");
+  await shot(page, "game-phone-start");
+}
 
-  await open(browser, "pages/game/game.html", PHONE);
-  await shot(browser, "game-phone-start");
+// Strict-autoplay browser: videos may not start, but something must always move,
+// and once you click anywhere the real videos must start.
+async function checkBlockedAutoplay(page: Page) {
+  console.log(`Autoplay blocked (${runName})`);
+  await open(page, "pages/home/home.html");
+  const before = await checkVideos(page, "home hero, autoplay blocked", false);
+  if (before.some((v) => v.playing)) fail("expected autoplay to be blocked in this run (test setup problem)");
+  await shot(page, "blocked-1-hero-before-click");
+
+  await page.mouse.click(40, 600); // any click
+  await wait(500);
+  await checkVideos(page, "home hero, after a click", true);
+  await shot(page, "blocked-2-hero-after-click");
+
+  await open(page, "pages/game/game.html");
+  await checkVideos(page, "game sky, autoplay blocked", false);
+  await shot(page, "blocked-3-game");
 }
 
 // ---------------------------------------------------------------------------
 
 fs.rmSync(SHOTS_DIR, { recursive: true, force: true });
-const browser = await openBrowser(path.join(TESTS_DIR, ".cache", "chrome-profile"));
-await Promise.all(["Runtime.enable", "Log.enable", "Network.enable", "Page.enable"].map((m) => browser.send(m)));
-watchForProblems(browser);
+
+let server: ChildProcess | null = null;
+if (!baseUrl) {
+  console.log("Starting wrangler dev...");
+  server = await startServer();
+  baseUrl = `http://localhost:${DEV_PORT}`;
+}
+console.log(`Testing ${baseUrl}\n`);
+
+// Makes the page behave like DuckDuckGo with autoplay blocked: every video refuses to play
+// until the visitor clicks, taps or presses a key (Chrome's own flags still allow muted autoplay).
+function blockAutoplayUntilClick() {
+  // unlocked only by a real click/tap/key (the test tool's own page checks don't count)
+  let unlocked = false;
+  const unlock = (event: Event) => {
+    if (event.isTrusted) unlocked = true;
+  };
+  for (const name of ["pointerdown", "keydown", "touchstart"]) window.addEventListener(name, unlock, true);
+
+  const realPlay = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () {
+    if (!unlocked) return Promise.reject(new DOMException("play() blocked until the user interacts", "NotAllowedError"));
+    return realPlay.call(this);
+  };
+  // the autoplay attribute would start videos by itself, so remove it as soon as the page is built
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("video").forEach((video) => {
+      video.removeAttribute("autoplay");
+      video.autoplay = false;
+      video.pause();
+    });
+  });
+}
+
+type Run = {
+  name: string;
+  launch: () => Promise<Browser>;
+  checks: ((page: Page) => Promise<void>)[];
+  blockAutoplay?: boolean;
+};
+
+const runs: Run[] = [
+  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGame] },
+  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGame] },
+  { name: "autoplay-blocked", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkBlockedAutoplay], blockAutoplay: true },
+];
 
 try {
-  await checkLanding(browser);
-  await checkHome(browser);
-  await checkWarp(browser);
-  await checkGame(browser);
-} catch (error) {
-  problems.push(`[${currentStep}] test crashed: ${(error as Error).message}`);
+  runName = "server";
+  await checkRangeRequests();
+
+  for (const run of runs) {
+    runName = run.name;
+    const browser = await run.launch();
+    const page = await browser.newPage({ viewport: DESKTOP });
+    if (run.blockAutoplay) await page.addInitScript(blockAutoplayUntilClick);
+    watchForProblems(page);
+    for (const check of run.checks) {
+      try {
+        await check(page);
+      } catch (error) {
+        fail(`test crashed: ${(error as Error).message.split("\n")[0]}`);
+      }
+    }
+    await browser.close();
+  }
 } finally {
-  browser.close();
+  server?.kill();
 }
 
 console.log(`\nScreenshots: ${SHOTS_DIR}`);

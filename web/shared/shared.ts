@@ -9,6 +9,188 @@
 //   - typewriter text                                (add data-type="text to type")
 //   - the photo/video credits list in the footer     (add id="credits-list")
 //   - a warp-jump transition on links to the game    (add data-game-link)
+//   - background videos that are forced to play       (add data-bg-video)
+//   - the real visible screen height as --vh          (use calc(var(--vh) * 100))
+//   - keepCanvasSized(): canvases that never stretch or squish
+//
+// Rule for this project: never trust the browser to do the right thing on its own.
+// Anything that matters is set in code, checked, and retried, with a good fallback.
+
+// ---------------------------------------------------------------------------
+// Real visible screen height
+// "100vh" means different things in different browsers (toolbars, zoom), so we
+// measure the visible height ourselves and give it to the CSS as --vh (1% of it).
+// ---------------------------------------------------------------------------
+
+function setupViewportHeight() {
+  const update = () => {
+    const height = window.visualViewport?.height ?? window.innerHeight;
+    document.documentElement.style.setProperty("--vh", `${height / 100}px`);
+  };
+  update();
+  window.addEventListener("resize", update);
+  window.addEventListener("orientationchange", update);
+  window.visualViewport?.addEventListener("resize", update);
+}
+
+// ---------------------------------------------------------------------------
+// Canvases that never stretch or squish
+// A canvas has two sizes: its box on the page, and its drawing grid. If they don't
+// match, everything drawn gets stretched. Browsers don't always tell us when the box
+// changes (e.g. a toolbar sliding away), so we watch the box itself, and drawing
+// loops call sync() every frame as a final check.
+//
+// Drawing code works in normal page pixels; the screen's pixel density is handled here.
+// ---------------------------------------------------------------------------
+
+type CanvasSize = { width: number; height: number };
+
+function keepCanvasSized(canvas: HTMLCanvasElement, onResize?: (size: CanvasSize) => void) {
+  const ctx = canvas.getContext("2d")!;
+  const size: CanvasSize = { width: 0, height: 0 };
+  let ratio = 0;
+
+  // returns true if the canvas had to be resized
+  function sync(): boolean {
+    // clientWidth/clientHeight = the box's real layout size (not affected by zoom animations)
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    if (width === size.width && height === size.height && pixelRatio === ratio) return false;
+
+    size.width = width;
+    size.height = height;
+    ratio = pixelRatio;
+    canvas.width = Math.max(1, Math.round(width * pixelRatio));
+    canvas.height = Math.max(1, Math.round(height * pixelRatio));
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    onResize?.(size);
+    return true;
+  }
+
+  new ResizeObserver(() => sync()).observe(canvas);
+  window.addEventListener("resize", () => sync());
+  sync();
+  return { ctx, size, sync };
+}
+
+// ---------------------------------------------------------------------------
+// Background videos that are forced to play
+// The autoplay attribute is only a request; browsers can refuse it (DuckDuckGo and
+// Safari often wait for a click). So for every <video data-bg-video data-anim="...">:
+//   - underneath it sits a fallback layer showing the poster image, slowly drifting
+//   - if the browser refuses to play, or the video is still stuck after 1.5 seconds,
+//     the fallback switches to the animated-image copy of the clip (data-anim).
+//     Browsers can block videos, but they always animate images, so it always moves.
+//   - the video fades in on top only once frames are actually moving
+//   - we keep asking it to play: when it scrolls into view, on any tap/click/key,
+//     when the tab comes back, and every 1.5 seconds if it's stuck
+//   - videos off screen are paused, so the browser has less reason to block them
+//   - the browser's own play button and controls are never shown (shared.css)
+// ---------------------------------------------------------------------------
+
+type BgVideo = { video: HTMLVideoElement; fallback: HTMLElement; onScreen: boolean; usingAnim: boolean };
+
+const bgVideos: BgVideo[] = [];
+
+// Swap the fallback layer from the still poster to the animated copy (only once it has loaded,
+// so there's never a blank gap)
+function useAnimatedFallback(entry: BgVideo) {
+  const animUrl = entry.video.dataset.anim;
+  if (entry.usingAnim || !animUrl) return;
+  entry.usingAnim = true;
+  const image = new Image();
+  image.onload = () => {
+    entry.fallback.style.backgroundImage = `url("${animUrl}")`;
+    entry.fallback.classList.add("is-animated");
+  };
+  image.onerror = () => (entry.usingAnim = false); // try again next time
+  image.src = animUrl;
+}
+
+function setupVideos() {
+  document.querySelectorAll<HTMLVideoElement>("video[data-bg-video]").forEach((video) => {
+    // Force every setting autoplay depends on, as properties AND attributes
+    video.muted = true;
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.controls = false;
+    video.disablePictureInPicture = true;
+    video.preload = "auto";
+    for (const attribute of ["muted", "playsinline", "webkit-playsinline", "disablepictureinpicture", "disableremoteplayback"]) {
+      video.setAttribute(attribute, "");
+    }
+    video.removeAttribute("controls");
+    video.tabIndex = -1;
+
+    // The fallback: the poster image, slowly drifting, right underneath the video
+    const fallback = document.createElement("div");
+    fallback.className = `${video.className} video-fallback`;
+    fallback.style.backgroundImage = `url("${video.poster}")`;
+    fallback.setAttribute("aria-hidden", "true");
+    video.before(fallback);
+    video.classList.add("managed-video"); // hidden until it's really playing
+
+    const entry: BgVideo = { video, fallback, onScreen: false, usingAnim: false };
+    bgVideos.push(entry);
+
+    // Only show the video once frames are actually moving
+    video.addEventListener("timeupdate", () => {
+      if (video.currentTime > 0 && !video.paused) video.classList.add("is-playing");
+    });
+    // If something else pauses it while it's on screen, start it again
+    video.addEventListener("pause", () => {
+      if (entry.onScreen && !document.hidden) setTimeout(() => forcePlay(entry), 300);
+    });
+    // If it fails to load: show the animated copy, and try loading the video once more
+    video.addEventListener(
+      "error",
+      () => {
+        useAnimatedFallback(entry);
+        setTimeout(() => video.load(), 2000);
+      },
+      { once: true }
+    );
+
+    // Play when on screen, pause when not. If it isn't truly playing 1.5 seconds after
+    // coming on screen, switch the fallback to the animated copy.
+    new IntersectionObserver(([change]) => {
+      entry.onScreen = !!change?.isIntersecting;
+      if (entry.onScreen) {
+        forcePlay(entry);
+        setTimeout(() => {
+          if (entry.onScreen && !video.classList.contains("is-playing")) useAnimatedFallback(entry);
+        }, 1500);
+      } else {
+        video.pause();
+      }
+    }).observe(video);
+  });
+
+  if (!bgVideos.length) return;
+
+  // Any tap, click or key press counts as permission to play in strict browsers
+  const retryAll = () => bgVideos.forEach((entry) => entry.onScreen && forcePlay(entry));
+  for (const eventName of ["pointerdown", "touchstart", "keydown", "click"]) {
+    window.addEventListener(eventName, retryAll, { passive: true });
+  }
+  document.addEventListener("visibilitychange", () => !document.hidden && retryAll());
+  window.addEventListener("pageshow", retryAll);
+  // Watchdog: catch any video that is on screen but stuck
+  setInterval(() => {
+    bgVideos.forEach((entry) => {
+      if (entry.onScreen && !document.hidden && entry.video.paused) forcePlay(entry);
+    });
+  }, 1500);
+}
+
+function forcePlay(entry: BgVideo) {
+  entry.video.muted = true; // some browsers only allow muted autoplay, so make sure
+  const attempt = entry.video.play();
+  // Refused (e.g. "wait for a click"): show the animated copy now, and keep retrying the video
+  attempt?.catch(() => useAnimatedFallback(entry));
+}
 
 // ---------------------------------------------------------------------------
 // Targeting cursor
@@ -55,22 +237,14 @@ type Ring = { x: number; y: number; radius: number; life: number; color: string 
 
 const blastSparks: Spark[] = [];
 const blastRings: Ring[] = [];
-let blastCanvas: HTMLCanvasElement;
-let blastContext: CanvasRenderingContext2D;
+let blastLayer: ReturnType<typeof keepCanvasSized>;
 let blastRunning = false;
 
 function setupBlasts() {
-  blastCanvas = document.createElement("canvas");
-  blastCanvas.className = "blast-layer";
-  document.body.append(blastCanvas);
-  blastContext = blastCanvas.getContext("2d")!;
-
-  const resize = () => {
-    blastCanvas.width = window.innerWidth;
-    blastCanvas.height = window.innerHeight;
-  };
-  resize();
-  window.addEventListener("resize", resize);
+  const canvas = document.createElement("canvas");
+  canvas.className = "blast-layer";
+  document.body.append(canvas);
+  blastLayer = keepCanvasSized(canvas);
 
   window.addEventListener("pointerdown", (event) => {
     // don't blast when typing in a box
@@ -103,8 +277,9 @@ function fireBlast(x: number, y: number, color = "#5ee7ff", power = 1) {
 }
 
 function drawBlasts() {
-  const ctx = blastContext;
-  ctx.clearRect(0, 0, blastCanvas.width, blastCanvas.height);
+  blastLayer.sync(); // make sure the layer still matches the screen
+  const ctx = blastLayer.ctx;
+  ctx.clearRect(0, 0, blastLayer.size.width, blastLayer.size.height);
   ctx.globalCompositeOperation = "lighter"; // overlapping light adds up and glows
 
   for (const ring of blastRings) {
@@ -302,10 +477,8 @@ function clearWarp() {
 //   "out": streaks start slow near the origin and speed up (leaving a page)
 //   "in":  streaks start fast and slow down as they fade (arriving on a page)
 function playWarpStreaks(canvas: HTMLCanvasElement, originX: number, originY: number, mode: "out" | "in", duration: number) {
-  const ctx = canvas.getContext("2d")!;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const farthest = Math.hypot(canvas.width, canvas.height);
+  const { ctx, size, sync } = keepCanvasSized(canvas);
+  const farthest = Math.hypot(size.width, size.height);
   const colors = ["#ffffff", "#5ee7ff", "#5ee7ff", "#ffc94a"];
 
   const newStreak = (distance: number): WarpStreak => ({
@@ -324,7 +497,8 @@ function playWarpStreaks(canvas: HTMLCanvasElement, originX: number, originY: nu
   const start = performance.now();
   function frame(now: number) {
     const progress = Math.min((now - start) / duration, 1);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    sync();
+    ctx.clearRect(0, 0, size.width, size.height);
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = mode === "out" ? Math.min(1, progress * 3) : 1 - progress;
 
@@ -351,6 +525,8 @@ function playWarpStreaks(canvas: HTMLCanvasElement, originX: number, originY: nu
 
 // ---------------------------------------------------------------------------
 
+setupViewportHeight();
+setupVideos();
 setupReticle();
 setupBlasts();
 whenVisible("[data-reveal]", (element) => element.classList.add("is-visible"));

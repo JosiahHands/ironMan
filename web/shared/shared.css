@@ -6,19 +6,19 @@
   font-family: "Orbitron";
   src: url("../media/fonts/orbitron-500-900.woff2") format("woff2");
   font-weight: 500 900;
-  font-display: swap;
+  font-display: block; /* hide text briefly rather than flash a different font */
 }
 @font-face {
   font-family: "Rajdhani";
   src: url("../media/fonts/rajdhani-500.woff2") format("woff2");
   font-weight: 500;
-  font-display: swap;
+  font-display: block; /* hide text briefly rather than flash a different font */
 }
 @font-face {
   font-family: "Rajdhani";
   src: url("../media/fonts/rajdhani-700.woff2") format("woff2");
   font-weight: 700;
-  font-display: swap;
+  font-display: block; /* hide text briefly rather than flash a different font */
 }
 
 :root {
@@ -35,6 +35,9 @@
 
   --font-display: "Orbitron", "Arial Black", sans-serif;
   --font-body: "Rajdhani", "Segoe UI", Arial, sans-serif;
+
+  /* 1% of the real visible screen height; shared.ts measures and updates it */
+  --vh: 1vh;
 }
 
 * {
@@ -87,6 +90,52 @@ h3 {
 .gold {
   color: var(--gold);
   text-shadow: 0 0 24px rgba(255, 201, 74, 0.6);
+}
+
+/* ---------- Background videos (shared.ts forces them to play) ---------- */
+
+/* never show the browser's own play button or controls on any video */
+video::-webkit-media-controls,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-overlay-play-button,
+video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-play-button {
+  display: none !important;
+  -webkit-appearance: none;
+  opacity: 0 !important;
+}
+
+/* the video stays invisible until it is really playing, then fades in */
+.managed-video {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.managed-video.is-playing {
+  opacity: 1;
+}
+
+/* underneath it: the poster image, slowly drifting so the background always moves */
+.video-fallback {
+  background-position: center;
+  background-size: cover;
+  pointer-events: none;
+  animation: poster-drift 14s ease-in-out infinite alternate;
+}
+
+/* the animated copy already moves, so it only drifts very gently */
+.video-fallback.is-animated {
+  animation-duration: 30s;
+}
+
+@keyframes poster-drift {
+  from {
+    transform: scale(1.06) translate(1.5%, 1%);
+  }
+  to {
+    transform: scale(1.2) translate(-2%, -1.5%);
+  }
 }
 
 /* blinking cursor while typewriter text is typing */

@@ -42,6 +42,7 @@
 /* solid bar once you scroll down */
 .nav.is-solid {
   background: rgba(5, 7, 15, 0.85);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   padding-block: 0.6rem;
   box-shadow: 0 1px 0 var(--line);
@@ -128,7 +129,7 @@
 
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(var(--vh) * 100);
   display: flex;
   align-items: center;
   padding: 7rem clamp(1rem, 4vw, 3rem) 4rem;
@@ -524,7 +525,7 @@
 
 .reactor-section {
   isolation: isolate;
-  min-height: 90vh;
+  min-height: calc(var(--vh) * 90);
   display: grid;
   place-items: center;
 }
@@ -1062,7 +1063,7 @@ body.flash::before {
 .launch {
   position: relative;
   isolation: isolate;
-  min-height: 80vh;
+  min-height: calc(var(--vh) * 80);
   display: grid;
   place-items: center;
   text-align: center;

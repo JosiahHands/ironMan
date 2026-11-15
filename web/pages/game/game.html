@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Noah's Armory | Repulsor Rush</title>
     <link rel="icon" href="../../media/images/favicon.svg" type="image/svg+xml" />
+    <!-- load the fonts right away so text never shows up in the wrong font -->
+    <link rel="preload" href="../../media/fonts/orbitron-500-900.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="../../shared/shared.css" />
     <link rel="stylesheet" href="game.css" />
     <script defer src="../../dist/shared/credits.js"></script>
@@ -27,7 +31,7 @@
     </header>
 
     <main class="stage" id="stage">
-      <video class="sky-video" src="../../media/videos/clouds.mp4" poster="../../media/videos/clouds.webp" autoplay muted loop playsinline></video>
+      <video data-bg-video data-anim="../../media/videos/clouds-anim.webp" class="sky-video" src="../../media/videos/clouds.mp4" poster="../../media/videos/clouds.webp" autoplay muted loop playsinline></video>
       <canvas id="game"></canvas>
 
       <!-- HUD corner brackets that draw themselves in, and a one-time scan line -->
