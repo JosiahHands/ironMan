@@ -138,6 +138,83 @@ video::-webkit-media-controls-play-button {
   }
 }
 
+/* ---------- "power-on" backgrounds: reveal like a HUD screen switching on ----------
+   Add class="power-on" to a <video data-bg-video>. The section stays dark until the video
+   has played smoothly for a moment (or its animated copy has loaded), then it powers on:
+   a scan line sweeps down while the picture unblurs, flashes bright, flickers and settles. */
+
+.power-on {
+  opacity: 0;
+}
+
+.managed-video.power-on.is-playing {
+  animation: power-on 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* the animated copy keeps its slow drift while powering on */
+.video-fallback.power-on.is-animated {
+  animation:
+    power-on 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
+    poster-drift 30s ease-in-out infinite alternate;
+}
+
+@keyframes power-on {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    filter: blur(16px) brightness(2.4) saturate(0);
+    scale: 1.14;
+  }
+  35% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    filter: blur(6px) brightness(1.9) saturate(0.6);
+  }
+  45% {
+    opacity: 0.3;
+  }
+  52% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    filter: none;
+    scale: 1;
+  }
+}
+
+/* the glowing line that sweeps down the section as it powers on */
+.power-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 0;
+  height: 3px;
+  background: #fff;
+  box-shadow: 0 0 18px 6px var(--cyan), 0 0 60px 12px rgba(94, 231, 255, 0.5);
+  pointer-events: none;
+  animation: power-scan 0.55s cubic-bezier(0.5, 0, 0.5, 1) forwards;
+}
+
+@keyframes power-scan {
+  from {
+    top: 0;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 /* blinking cursor while typewriter text is typing */
 .is-typing::after {
   content: "▌";

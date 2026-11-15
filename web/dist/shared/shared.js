@@ -69,6 +69,7 @@ function useAnimatedFallback(entry) {
     image.onload = () => {
         entry.fallback.style.backgroundImage = `url("${animUrl}")`;
         entry.fallback.classList.add("is-animated");
+        powerOnScan(entry.fallback);
     };
     image.onerror = () => (entry.usingAnim = false); // try again next time
     image.src = animUrl;
@@ -97,10 +98,14 @@ function setupVideos() {
         video.classList.add("managed-video"); // hidden until it's really playing
         const entry = { video, fallback, onScreen: false, usingAnim: false };
         bgVideos.push(entry);
-        // Only show the video once frames are actually moving
+        // Only show the video once frames are actually moving. Videos with the "power-on" class
+        // wait until they've played smoothly for a moment, so any startup stutter stays hidden.
+        const smoothAfter = video.classList.contains("power-on") ? 0.35 : 0;
         video.addEventListener("timeupdate", () => {
-            if (video.currentTime > 0 && !video.paused)
+            if (video.currentTime > smoothAfter && !video.paused && !video.classList.contains("is-playing")) {
                 video.classList.add("is-playing");
+                powerOnScan(video);
+            }
         });
         // If something else pauses it while it's on screen, start it again
         video.addEventListener("pause", () => {
@@ -144,6 +149,19 @@ function setupVideos() {
                 forcePlay(entry);
         });
     }, 1500);
+}
+// "power-on" backgrounds: the first time one appears, a glowing scan line sweeps down
+// the section while the background is revealed (the reveal itself is CSS: .power-on)
+function powerOnScan(element) {
+    const section = element.parentElement;
+    if (!element.classList.contains("power-on") || !section || section.dataset.poweredOn)
+        return;
+    section.dataset.poweredOn = "yes"; // only the first time
+    const scan = document.createElement("span");
+    scan.className = "power-scan";
+    scan.setAttribute("aria-hidden", "true");
+    element.after(scan);
+    scan.addEventListener("animationend", () => scan.remove());
 }
 function forcePlay(entry) {
     entry.video.muted = true; // some browsers only allow muted autoplay, so make sure
