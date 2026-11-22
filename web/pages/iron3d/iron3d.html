@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Noah's Armory | Iron Strike 3D</title>
+    <link rel="icon" href="../../media/images/favicon.svg" type="image/svg+xml" />
+    <!-- load the fonts right away so text never shows up in the wrong font -->
+    <link rel="preload" href="../../media/fonts/orbitron-500-900.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="../../media/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../../shared/shared.css" />
+    <link rel="stylesheet" href="iron3d.css" />
+    <!-- Three.js (the 3D library), bundled into one file so it works offline: see libs/three-entry.js -->
+    <script defer src="../../libs/three.min.js"></script>
+    <script defer src="../../dist/shared/credits.js"></script>
+    <script defer src="../../dist/shared/shared.js"></script>
+    <script defer src="../../dist/pages/iron3d/iron3d.js"></script>
+  </head>
+  <!-- "intro" plays the arriving half of the warp; data-phase is set by iron3d.ts:
+       start, countdown, playing, paused, down, over (or no-3d if the browser can't draw 3D) -->
+  <body class="iron-page intro" data-phase="start">
+    <div class="warp warp-in" id="warp-in" aria-hidden="true">
+      <canvas id="warp-canvas"></canvas>
+      <div class="iris-hole"></div>
+      <div class="iris-ring"></div>
+    </div>
+
+    <header class="iron-nav">
+      <a class="brand" href="../../index.html"><span class="brand-mark"></span>NOAH'S ARMORY</a>
+      <a class="btn btn-ghost" href="../games/games.html">← All games</a>
+    </header>
+
+    <main class="stage" id="stage">
+      <canvas id="world"></canvas>
+
+      <!-- things drawn over the 3D world: target brackets, score pop-ups, hit flashes -->
+      <div class="world-layer" aria-hidden="true">
+        <div id="markers"></div>
+        <div id="popups"></div>
+        <div class="heading" id="heading" hidden></div>
+        <div class="hitmarker" id="hitmarker"></div>
+        <div class="hurt" id="hurt"></div>
+        <div class="stick" id="stick"><span id="stick-knob"></span></div>
+      </div>
+
+      <!-- the inside of the helmet: a thin dark frame around a wide visor, with a glowing edge.
+           The frame is everything outside the visor-shaped hole (preserveAspectRatio="none" stretches
+           it to any screen). -->
+      <div class="visor" aria-hidden="true">
+        <svg viewBox="0 0 1000 600" preserveAspectRatio="none">
+          <defs>
+            <filter id="visor-soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="10" /></filter>
+          </defs>
+          <path class="visor-frame" fill-rule="evenodd" d="M-20 -20 H1020 V620 H-20 Z M18 110 Q22 22 160 14 L430 12 Q500 32 570 12 L840 14 Q978 22 982 110 L984 430 Q980 560 840 586 L600 590 Q500 574 400 590 L160 586 Q20 560 16 430 Z" />
+          <path class="visor-shade" filter="url(#visor-soft)" d="M18 110 Q22 22 160 14 L430 12 Q500 32 570 12 L840 14 Q978 22 982 110 L984 430 Q980 560 840 586 L600 590 Q500 574 400 590 L160 586 Q20 560 16 430 Z" />
+          <path class="visor-edge" d="M18 110 Q22 22 160 14 L430 12 Q500 32 570 12 L840 14 Q978 22 982 110 L984 430 Q980 560 840 586 L600 590 Q500 574 400 590 L160 586 Q20 560 16 430 Z" />
+        </svg>
+        <div class="visor-glass"></div>
+      </div>
+
+      <!-- the HUD while flying -->
+      <div class="hud">
+        <div class="hud-top">
+          <div class="hud-boxes">
+            <div class="hud-box"><span class="hud-label">SCORE</span><span class="hud-value" id="hud-score">0</span></div>
+            <div class="hud-box"><span class="hud-label">WAVE</span><span class="hud-value" id="hud-wave">-</span></div>
+          </div>
+          <div class="boss-bar" id="boss-bar">
+            <span class="boss-name">DREADNOUGHT</span>
+            <i><b id="boss-fill"></b></i>
+          </div>
+          <div class="hud-buttons">
+            <button class="hud-button" id="view-button" aria-label="Switch to the chase camera">HELMET</button>
+            <button class="hud-button" id="mute-button" aria-label="Turn sound off">🔊</button>
+            <button class="hud-button" id="pause-button" aria-label="Pause">❚❚</button>
+          </div>
+        </div>
+        <div class="combo" id="hud-combo">COMBO x2</div>
+
+        <div class="hud-bottom">
+          <div class="hud-left">
+            <canvas class="radar" id="radar"></canvas>
+            <div class="meters">
+              <div class="meter armor" id="armor-box">
+                <span class="hud-label">ARMOR <b id="armor-text">100%</b></span>
+                <i><b id="armor-fill"></b></i>
+              </div>
+              <div class="meter boost">
+                <span class="hud-label">BOOST <small class="for-mouse">SHIFT</small></span>
+                <i><b id="boost-fill"></b></i>
+              </div>
+              <div class="meter missiles" id="missile-box">
+                <span class="hud-label">MISSILES <small class="for-mouse">RIGHT-CLICK / E</small></span>
+                <i><b id="missile-fill"></b></i>
+              </div>
+            </div>
+          </div>
+          <div class="hud-right">
+            <button class="touch-button" id="touch-boost">BOOST</button>
+            <button class="touch-button" id="touch-missiles">MISSILES</button>
+            <button class="beam-button" id="beam-button" aria-label="Fire the unibeam">
+              <span class="beam-fill" id="beam-fill"></span>
+              <span class="beam-text" id="beam-text">UNIBEAM</span>
+              <small class="for-mouse">SPACE</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner" id="banner"></div>
+      <p class="comms" id="comms" aria-live="polite"></p>
+      <div class="zone-warning" id="zone-warning">⚠ LEAVING THE CITY. TURNING BACK!</div>
+
+      <!-- 3-2-1-GO! -->
+      <div class="countdown" id="countdown" aria-live="assertive"><span id="countdown-number"></span></div>
+
+      <!-- start screen: the suit waits on top of Armory Tower behind it -->
+      <div class="overlay start-screen">
+        <div class="overlay-box">
+          <p class="kicker" data-type="ARMORY TOWER // SUIT ONLINE"></p>
+          <h1>Iron <span class="shine">Strike</span> <span class="badge-3d">3D</span></h1>
+          <p class="start-text">A drone armada is attacking the city, Noah! Launch from Armory Tower, blast every drone out of the sky, and take down the giant <b>Dreadnought</b>.</p>
+          <ul class="how-to for-mouse">
+            <li><b>Mouse</b> steer · <b>hold click</b> repulsors</li>
+            <li><b>Right-click</b> or <b>E</b> missiles · <b>SPACE</b> unibeam</li>
+            <li><b>SHIFT</b> boost · <b>WASD</b> steer too · <b>P</b> pause</li>
+            <li><b>V</b> helmet view / chase camera</li>
+            <li><b class="gold">Gold rings</b> repair your armor!</li>
+          </ul>
+          <ul class="how-to for-touch">
+            <li><b>Drag</b> anywhere to steer. Your suit fires by itself!</li>
+            <li>Buttons for <b>boost</b>, <b>missiles</b> and the <b>unibeam</b></li>
+            <li><b class="gold">Gold rings</b> repair your armor!</li>
+          </ul>
+          <button class="btn btn-red" id="start-button">▶ Launch</button>
+          <p class="best-line">BEST SCORE: <span id="best-score">0</span></p>
+        </div>
+      </div>
+
+      <div class="overlay pause-screen">
+        <div class="overlay-box">
+          <p class="kicker">SUIT SYSTEMS ON HOLD</p>
+          <h1>PAUSED</h1>
+          <div class="report-buttons">
+            <button class="btn btn-red" id="resume-button">▶ Resume</button>
+            <button class="btn btn-ghost" id="quit-button">Quit mission</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay report-screen">
+        <div class="overlay-box">
+          <p class="kicker">MISSION REPORT</p>
+          <h1 id="report-title">SUIT <span class="gold">DOWN!</span></h1>
+          <div class="report-stats">
+            <div><span>SCORE</span><b id="report-score">0</b></div>
+            <div><span>WAVE</span><b id="report-wave">1</b></div>
+            <div><span>DRONES</span><b id="report-kills">0</b></div>
+            <div><span>BEST COMBO</span><b id="report-combo">x0</b></div>
+          </div>
+          <p class="report-best" id="report-best"></p>
+          <div class="report-buttons">
+            <button class="btn btn-red" id="again-button">▶ Play again</button>
+            <button class="btn btn-ghost" id="menu-button">Main menu</button>
+            <a class="btn btn-ghost" href="../games/games.html">All games</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay no-3d-screen">
+        <div class="overlay-box">
+          <p class="kicker">SUIT OFFLINE</p>
+          <h1>No 3D here</h1>
+          <p class="start-text">This browser can't draw 3D graphics (WebGL is turned off or not supported). Try another browser, or play one of the other games!</p>
+          <a class="btn btn-red" href="../games/games.html">All games</a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p class="made-for">BUILT FOR NOAH <span class="heart">♥</span></p>
+      <details class="credits">
+        <summary>Photo &amp; video credits</summary>
+        <ul class="credits-list" id="credits-list"></ul>
+      </details>
+      <p class="signature">
+        <strong>BUILT BY JOSIAH HANDS</strong><br />
+        <a href="mailto:josiahwhands@gmail.com">josiahwhands@gmail.com</a>
+      </p>
+    </footer>
+  </body>
+</html>

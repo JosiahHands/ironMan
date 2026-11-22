@@ -24,5 +24,13 @@ const GAMES = [
         still: "media/images/games/suit-lab.webp",
         bestScoreKey: "suit-lab-best",
     },
+    {
+        title: "Iron Strike 3D",
+        tagline: "Real 3D! Launch off Armory Tower, see through the helmet, and smash the drone armada!",
+        page: "pages/iron3d/iron3d.html",
+        preview: "media/images/games/iron-strike-3d-preview.webp",
+        still: "media/images/games/iron-strike-3d.webp",
+        bestScoreKey: "iron3d-best",
+    },
 ];
 //# sourceMappingURL=games.js.map
