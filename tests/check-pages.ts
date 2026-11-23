@@ -125,7 +125,9 @@ async function checkMedia(page: Page) {
   report.missingFonts.forEach((font) => fail(`font not loaded: ${font}`));
 }
 
-// Every canvas's drawing grid must match its box, or drawings get stretched/squished
+// Every canvas's drawing grid must match its box, or drawings get stretched/squished.
+// (A canvas can draw at a lower sharpness on purpose, like the 3D game on slow computers: it says
+// so in data-pixel-ratio, and its grid must then match its box at that sharpness.)
 async function checkCanvases(page: Page, label: string) {
   const canvases = await page.evaluate(() =>
     [...document.querySelectorAll("canvas")]
@@ -135,7 +137,7 @@ async function checkCanvases(page: Page, label: string) {
         gridRatio: c.width / c.height,
         boxRatio: c.clientWidth / c.clientHeight,
         gridWidth: c.width,
-        expectedWidth: Math.round(c.clientWidth * (window.devicePixelRatio || 1)),
+        expectedWidth: Math.round(c.clientWidth * (Number(c.dataset.pixelRatio) || window.devicePixelRatio || 1)),
       }))
   );
   for (const c of canvases) {
@@ -461,6 +463,85 @@ async function checkSuitLab(page: Page) {
   await shot(page, "lab-phone-free");
 }
 
+async function checkIron3d(page: Page) {
+  console.log(`Iron Strike 3D (${runName})`);
+  const phase = () => page.evaluate(() => document.body.dataset.phase);
+  const inHelmet = () => page.evaluate(() => document.body.classList.contains("in-helmet"));
+  await open(page, "pages/iron3d/iron3d.html");
+  await wait(1500); // the menu flies in after the warp
+  await checkMedia(page);
+  if ((await phase()) === "no-3d") {
+    fail("Iron Strike 3D: the browser says it can't draw 3D (no WebGL)");
+    return;
+  }
+  await checkCanvases(page, "iron3d start screen");
+  await shot(page, "iron3d-1-start");
+
+  // Launch: 3-2-1-GO, then the camera flies into the helmet
+  await clickOn(page, "#start-button");
+  await wait(1000);
+  if (!(await page.locator("#countdown.is-on").count())) fail("countdown did not show after Launch");
+  await shot(page, "iron3d-2-countdown");
+  await wait(3600);
+  if ((await phase()) !== "playing") fail(`expected to be flying after the countdown, but the phase is "${await phase()}"`);
+  if (!(await inHelmet())) fail("the camera did not move into the helmet after takeoff");
+  await shot(page, "iron3d-3-helmet-view");
+
+  // fly and fire at the first wave (aim assist pulls the shots onto drones near the aim)
+  currentStep = "iron3d first wave";
+  await page.mouse.move(683, 430);
+  await page.mouse.down();
+  for (let i = 0; i < 90; i++) {
+    await page.mouse.move(683 + Math.sin(i / 8) * 90, 430 + Math.cos(i / 6) * 50);
+    await wait(100);
+  }
+  await page.mouse.up();
+  const score = Number((await page.textContent("#hud-score"))!.replace(/\D/g, ""));
+  if (!(score > 0)) fail("flying and firing at the first wave scored nothing");
+  await shot(page, "iron3d-4-fight");
+
+  // V switches to the chase camera and back
+  currentStep = "iron3d camera views";
+  await page.keyboard.press("v");
+  await wait(500);
+  if (await inHelmet()) fail("V did not switch to the chase camera");
+  await shot(page, "iron3d-5-chase-view");
+  await page.keyboard.press("v");
+  await wait(500);
+  if (!(await inHelmet())) fail("V did not switch back to the helmet view");
+
+  // the play area changes size without the window resizing: the 3D view must not stretch
+  currentStep = "iron3d canvas follows play area";
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = "520px"));
+  await wait(400);
+  await checkCanvases(page, "iron3d play area shrunk without a window resize");
+  await page.evaluate(() => (document.getElementById("stage")!.style.height = ""));
+  await page.setViewportSize({ width: 1100, height: 640 });
+  await wait(400);
+  await checkCanvases(page, "iron3d window resized mid-game");
+  await page.setViewportSize(DESKTOP);
+  await wait(400);
+
+  // pause, then quit back to the menu
+  currentStep = "iron3d pause and quit";
+  await page.keyboard.press("p");
+  await wait(400);
+  if ((await phase()) !== "paused") fail("P did not pause the game");
+  await shot(page, "iron3d-6-paused");
+  await clickOn(page, "#quit-button");
+  await wait(800);
+  if ((await phase()) !== "start") fail("Quit mission did not go back to the start screen");
+
+  await open(page, "pages/iron3d/iron3d.html", PHONE);
+  await wait(1500);
+  await checkCanvases(page, "iron3d phone start");
+  await shot(page, "iron3d-phone-start");
+  await clickOn(page, "#start-button");
+  await wait(6000);
+  await checkCanvases(page, "iron3d phone flying");
+  await shot(page, "iron3d-phone-flying");
+}
+
 // Strict-autoplay browser: videos may not start, but something must always move,
 // and once you click anywhere the real videos must start.
 async function checkBlockedAutoplay(page: Page) {
@@ -525,8 +606,8 @@ type Run = {
 };
 
 const runs: Run[] = [
-  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab] },
-  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab] },
+  { name: "chrome", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab, checkIron3d] },
+  { name: "webkit", launch: () => webkit.launch(), checks: [checkLanding, checkHome, checkWarp, checkGamesPage, checkGame, checkSuitLab, checkIron3d] },
   { name: "autoplay-blocked", launch: () => chromium.launch({ channel: "chrome" }), checks: [checkBlockedAutoplay], blockAutoplay: true },
 ];
 

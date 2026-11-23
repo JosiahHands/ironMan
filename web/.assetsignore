@@ -10,3 +10,6 @@ tsconfig.json
 
 # This file itself
 .assetsignore
+
+# The list used to build libs/three.min.js (the bundle itself IS uploaded)
+libs/three-entry.js

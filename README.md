@@ -9,6 +9,7 @@ An Iron Man fan site built for Noah, with something moving or reacting on every 
 | All Games | `web/pages/games/games.html` | A card for every game, with a moving gameplay preview and your best score |
 | Game | `web/pages/game/game.html` | **Repulsor Rush**: fly above the clouds and blast drones |
 | Game | `web/pages/suitLab/suitLab.html` | **Suit Lab**: build your own suit, then fly it through a city and smash it (Free Fly, Demolition, Drone Defense) |
+| Game | `web/pages/iron3d/iron3d.html` | **Iron Strike 3D**: real 3D. Launch off Armory Tower, fly from inside the helmet over a city at sunset, and fight drone waves and the giant Dreadnought |
 
 Every page also has a targeting cursor, a repulsor blast wherever you click, and an expandable photo/video credits list in the footer.
 
@@ -53,6 +54,7 @@ web/
   pages/game/                        game page: Repulsor Rush (.html, .css, .ts)
   pages/suitLab/                     game page: Suit Lab (suit.ts = the suit, flight.ts = the
                                      flying game, suitLab.ts = the garage)
+  pages/iron3d/                      game page: Iron Strike 3D (.html, .css, .ts), drawn with Three.js
   pages/games/                       All Games page: one card per game
   shared/
     games.ts                         the list of games shown on the All Games page
@@ -68,6 +70,9 @@ web/
                                      animated copies (-anim.webp) for browsers that block video
     fonts/                           Orbitron + Rajdhani
     credits.json                     who made each photo/video
+  libs/three.min.js                  Three.js (the 3D library) bundled into one file, so it works offline
+  libs/three-entry.js                which parts of Three.js go into that bundle
+  libs/three-globals.d.ts            tells TypeScript about the global THREE the bundle creates
   dist/                              compiled JavaScript (made by tsc)
   .assetsignore                      files in web/ that are NOT uploaded to Cloudflare
 worker/                              Cloudflare Worker that serves videos in pieces (range requests)
@@ -77,7 +82,21 @@ wrangler.jsonc                       Cloudflare deploy settings
 package.json                         build / dev / deploy / test commands
 ```
 
-Each page loads `shared/credits.js`, then `shared/shared.js`, then its own script, all from `dist/`.
+Each page loads `shared/credits.js`, then `shared/shared.js`, then its own script, all from `dist/`. Iron Strike 3D also loads `libs/three.min.js` first.
+
+### Iron Strike 3D and Three.js
+
+Iron Strike 3D uses [Three.js](https://threejs.org) (MIT License). Everything in its world (the city, the suit, the drones) is built from simple shapes in code, and every sound is made in code, so there are no model or sound files.
+
+Browsers block JavaScript modules on pages opened by double-clicking, so Three.js can't be loaded with `import`. Instead, esbuild bundles it (plus the add-ons the game uses: bloom glow, reflections, rounded boxes) into one plain script, `web/libs/three.min.js`, which creates a global `THREE`. The bundle is committed, so you only rebuild it when updating Three.js or adding an add-on:
+
+```sh
+npm run build:three
+```
+
+To add an add-on, list it in both `libs/three-entry.js` and `libs/three-globals.d.ts`. To update Three.js, install the same version of `three` and `@types/three`, then rebuild.
+
+Controls: mouse to steer, hold click to fire, right-click or E for missiles, SPACE for the unibeam, SHIFT to boost, V to switch between the helmet view and the chase camera, P to pause, M to mute. On touch screens, drag to steer and the suit fires by itself.
 
 ### Rule: never trust the browser
 Browsers differ, and many quietly refuse things (autoplay, resize events, newer CSS). So the site forces what matters and checks it:
@@ -163,7 +182,7 @@ node tests/check-pages.ts https://noaharmor.com   # check the live site
 ```
 
 Tests use Playwright (installed by `npm install`; WebKit once with `npx playwright install webkit`). Each run covers:
-- **Chrome** and **WebKit** (Safari's engine, which DuckDuckGo on Mac uses) at desktop and phone sizes. They click through everything: scanning a suit, overloading the reactor, flipping cards, the helmet designer, the warp into the game, the countdown, playing until game over, and Play again. In Suit Lab they build a suit, fly and fire in Demolition (it must score), start Drone Defense (wave 1 must arrive), and reload to check the suit was remembered.
+- **Chrome** and **WebKit** (Safari's engine, which DuckDuckGo on Mac uses) at desktop and phone sizes. They click through everything: scanning a suit, overloading the reactor, flipping cards, the helmet designer, the warp into the game, the countdown, playing until game over, and Play again. In Suit Lab they build a suit, fly and fire in Demolition (it must score), start Drone Defense (wave 1 must arrive), and reload to check the suit was remembered. In Iron Strike 3D they launch (countdown, then the camera must end up in the helmet), fight the first wave (it must score), switch camera views, pause, and quit to the menu.
 - **Autoplay blocked**, set up to behave like DuckDuckGo. Something must still move, the browser's play button must never show, and one click must start the real videos.
 - **Squish checks:** the game's play area is resized mid-game, with and without a window resize, and every canvas must stay in proportion.
 - **Range requests:** videos must be served in pieces (`206`).

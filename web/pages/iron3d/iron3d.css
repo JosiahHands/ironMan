@@ -1,0 +1,1197 @@
+/* =========================================================================
+   Iron Strike 3D
+   The body's data-phase decides what shows: start, countdown, playing, paused, down, over
+   (or no-3d). iron3d.ts sets it.
+   ========================================================================= */
+
+/* ---------- Showing each phase ---------- */
+
+.overlay,
+.hud,
+.combo,
+.zone-warning,
+.world-layer {
+  display: none;
+}
+
+[data-phase="start"] .start-screen,
+[data-phase="paused"] .pause-screen,
+[data-phase="over"] .report-screen,
+[data-phase="no-3d"] .no-3d-screen {
+  display: grid;
+}
+
+[data-phase="playing"] .hud,
+[data-phase="paused"] .hud,
+[data-phase="down"] .hud {
+  display: flex;
+}
+
+[data-phase="playing"] .world-layer,
+[data-phase="playing"] .combo,
+[data-phase="playing"] .zone-warning {
+  display: block;
+}
+
+/* the HUD has its own buttons while flying, so the top bar steps aside */
+body:not([data-phase="start"]):not([data-phase="over"]):not([data-phase="no-3d"]) .iron-nav {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* mouse-and-keyboard tips vs touch tips */
+.for-touch,
+.touch-mode .for-mouse {
+  display: none;
+}
+
+.touch-mode .for-touch {
+  display: block;
+}
+
+/* ---------- Top bar ---------- */
+
+.iron-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem clamp(1rem, 3vw, 2rem);
+  background: linear-gradient(180deg, rgba(5, 7, 15, 0.85), transparent);
+  transition: opacity 0.4s;
+}
+
+.iron-nav .btn {
+  padding: 0.6em 1.1em;
+  font-size: 0.75rem;
+}
+
+.intro .iron-nav {
+  animation: iron-drop 0.6s 1.15s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+@keyframes iron-drop {
+  from {
+    transform: translateY(-110%);
+    opacity: 0;
+  }
+}
+
+/* ---------- The 3D world ---------- */
+
+.stage {
+  position: relative;
+  height: calc(var(--vh) * 100);
+  min-height: 420px;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(circle at 50% 70%, #4a2342, #05070f 70%);
+  touch-action: none; /* finger drags steer the suit instead of scrolling */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#world {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* a gentle HUD-style darkening at the screen edges */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(5, 7, 15, 0.55));
+}
+
+.world-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#markers,
+#popups {
+  position: absolute;
+  inset: 0;
+}
+
+/* brackets around drones: placed with transform by iron3d.ts */
+.marker {
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 59, 48, 0.85);
+  border-radius: 6px;
+  /* only the corners show */
+  -webkit-mask: linear-gradient(#000 0 0) top left / 10px 10px no-repeat, linear-gradient(#000 0 0) top right / 10px 10px no-repeat, linear-gradient(#000 0 0) bottom left / 10px 10px no-repeat, linear-gradient(#000 0 0) bottom right / 10px 10px no-repeat;
+  mask: linear-gradient(#000 0 0) top left / 10px 10px no-repeat, linear-gradient(#000 0 0) top right / 10px 10px no-repeat, linear-gradient(#000 0 0) bottom left / 10px 10px no-repeat, linear-gradient(#000 0 0) bottom right / 10px 10px no-repeat;
+  filter: drop-shadow(0 0 4px #ff3b30);
+}
+
+.marker[hidden] {
+  display: none;
+}
+
+.marker.is-locked {
+  border-color: var(--gold);
+  filter: drop-shadow(0 0 6px var(--gold));
+  scale: 1.25;
+  transition: scale 0.15s;
+}
+
+.marker.is-boss {
+  left: -40px;
+  top: -40px;
+  width: 80px;
+  height: 80px;
+  border-color: #d43cff;
+  filter: drop-shadow(0 0 8px #d43cff);
+  -webkit-mask-size: 22px 22px;
+  mask-size: 22px 22px;
+}
+
+/* drones you can't see: an arrow at the edge of the screen pointing at them */
+.marker.is-offscreen {
+  left: -9px;
+  top: -9px;
+  width: 0;
+  height: 0;
+  border: 0;
+  border-left: 18px solid #ff3b30;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-radius: 0;
+  -webkit-mask: none;
+  mask: none;
+  scale: 1;
+}
+
+.marker.is-boss.is-offscreen {
+  border-left-color: #d43cff;
+  border-left-width: 26px;
+  border-top-width: 13px;
+  border-bottom-width: 13px;
+}
+
+/* where the suit is heading */
+.heading {
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(94, 231, 255, 0.7);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.heading[hidden] {
+  display: none;
+}
+
+/* an X that flashes on the cursor when a shot hits */
+.hitmarker {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  opacity: 0;
+  background:
+    linear-gradient(45deg, transparent 45%, #fff 45% 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, #fff 45% 55%, transparent 55%);
+  -webkit-mask: radial-gradient(circle, transparent 5px, #000 6px);
+  mask: radial-gradient(circle, transparent 5px, #000 6px);
+  filter: drop-shadow(0 0 4px var(--cyan));
+}
+
+.hitmarker.is-on {
+  animation: hitmarker 0.18s ease-out;
+}
+
+@keyframes hitmarker {
+  from {
+    opacity: 1;
+    scale: 1.3;
+  }
+  to {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+/* red flash at the edges when the suit gets hit */
+.hurt {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 30, 20, 0.75));
+}
+
+/* "+100" floating up where a drone blew up */
+.popup {
+  position: absolute;
+  translate: -50% -50%;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  color: #fff;
+  text-shadow: 0 0 10px var(--cyan), 0 2px 0 rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  animation: popup 1s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.popup.is-gold {
+  color: var(--gold);
+  font-size: 1.3rem;
+  text-shadow: 0 0 14px var(--gold), 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+@keyframes popup {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(0.6);
+  }
+  20% {
+    transform: translateY(-10px) scale(1.2);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-60px) scale(1);
+  }
+}
+
+/* the touch joystick: appears where your finger lands */
+.stick {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border: 2px solid rgba(94, 231, 255, 0.5);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(94, 231, 255, 0.12), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.stick.is-on {
+  opacity: 1;
+}
+
+.stick span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 15%, var(--cyan) 40%, rgba(94, 231, 255, 0.3) 70%);
+  box-shadow: 0 0 16px var(--cyan);
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.8rem;
+  pointer-events: none;
+}
+
+.hud button {
+  pointer-events: auto;
+}
+
+.hud-top,
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.hud-bottom {
+  align-items: flex-end;
+}
+
+[data-phase="playing"] .hud-top {
+  animation: hud-slide-down 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+[data-phase="playing"] .hud-bottom {
+  animation: hud-slide-up 0.6s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* don't replay the slide every time you un-pause */
+[data-phase="playing"].resumed .hud-top,
+[data-phase="playing"].resumed .hud-bottom {
+  animation: none;
+}
+
+@keyframes hud-slide-down {
+  from {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+}
+
+@keyframes hud-slide-up {
+  from {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+}
+
+.hud-boxes {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(5, 7, 15, 0.7);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.hud-box {
+  display: grid;
+  min-width: 78px;
+  padding: 0.1rem 0.6rem;
+  text-align: center;
+}
+
+.hud-label {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+}
+
+.hud-label small {
+  margin-left: 0.4em;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.hud-value {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: var(--gold);
+}
+
+.hud-value.bump {
+  animation: iron-bump 0.25s;
+}
+
+@keyframes iron-bump {
+  50% {
+    transform: scale(1.3);
+  }
+}
+
+.hud-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.hud-button {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 0.9em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(5, 7, 15, 0.7);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.hud-button:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(255, 201, 74, 0.4);
+}
+
+/* the Dreadnought's health bar */
+.boss-bar {
+  flex: 1;
+  max-width: 460px;
+  display: grid;
+  gap: 0.25rem;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.4s, transform 0.4s;
+}
+
+.boss-bar.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.boss-name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.35em;
+  color: #e88bff;
+  text-shadow: 0 0 12px #d43cff;
+}
+
+.boss-bar i {
+  height: 12px;
+  border: 1px solid rgba(212, 60, 255, 0.6);
+  border-radius: 99px;
+  background: rgba(5, 7, 15, 0.7);
+  overflow: hidden;
+}
+
+.boss-bar b {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff3b30, #d43cff);
+  box-shadow: 0 0 14px #d43cff;
+  transition: width 0.2s;
+}
+
+.combo {
+  position: absolute;
+  top: 5rem;
+  left: 1rem;
+  z-index: 10;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(255, 201, 74, 0.8);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s, transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.6);
+  pointer-events: none;
+}
+
+.combo.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.hud-left {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.radar {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 2px solid rgba(94, 231, 255, 0.55);
+  box-shadow: 0 0 18px rgba(94, 231, 255, 0.35);
+}
+
+.meters {
+  display: grid;
+  gap: 0.45rem;
+  width: 210px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(5, 7, 15, 0.7);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.meter {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.meter b {
+  color: #fff;
+}
+
+.meter i {
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(94, 231, 255, 0.12);
+  overflow: hidden;
+}
+
+.meter i b {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 99px;
+  transition: width 0.15s;
+}
+
+.armor i b {
+  background: linear-gradient(90deg, #3dff8a, #5ee7ff);
+  box-shadow: 0 0 10px #3dff8a;
+}
+
+.armor.is-low i b {
+  background: linear-gradient(90deg, #ff3b30, #ff8a3d);
+  box-shadow: 0 0 10px #ff3b30;
+  animation: urgent-bar 0.5s ease-in-out infinite alternate;
+}
+
+.armor.is-low .hud-label b {
+  color: var(--red-hot);
+}
+
+@keyframes urgent-bar {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.boost i b {
+  background: linear-gradient(90deg, var(--cyan), #fff);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+.boost i b.is-locked {
+  background: #59627a;
+  box-shadow: none;
+}
+
+.missiles i b {
+  background: linear-gradient(90deg, var(--red-hot), var(--gold));
+  box-shadow: 0 0 10px var(--gold);
+}
+
+.missiles.is-ready .hud-label {
+  color: var(--gold);
+  text-shadow: 0 0 10px var(--gold);
+}
+
+.hud-right {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+/* unibeam meter: fills up as you destroy drones, then it's a big button */
+.beam-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 58px;
+  border: 2px solid var(--cyan);
+  border-radius: 999px;
+  background: rgba(5, 7, 15, 0.75);
+  color: #fff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.beam-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: linear-gradient(90deg, rgba(94, 231, 255, 0.35), rgba(94, 231, 255, 0.85));
+  transition: width 0.2s;
+}
+
+.beam-text {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+}
+
+.beam-button small {
+  position: relative;
+  margin-top: -1.1rem;
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+.beam-button.is-ready {
+  border-color: #fff;
+  box-shadow: 0 0 24px var(--cyan), inset 0 0 18px rgba(255, 255, 255, 0.5);
+  animation: beam-ready 0.7s ease-in-out infinite alternate;
+}
+
+.beam-button.is-ready small {
+  color: #fff;
+}
+
+@keyframes beam-ready {
+  to {
+    box-shadow: 0 0 44px var(--cyan), 0 0 12px #fff, inset 0 0 24px rgba(255, 255, 255, 0.7);
+    transform: scale(1.05);
+  }
+}
+
+/* touch-screen buttons (only on touch screens) */
+.touch-button {
+  display: none;
+  width: 74px;
+  height: 74px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  background: rgba(5, 7, 15, 0.7);
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  touch-action: none;
+}
+
+.touch-mode .touch-button {
+  display: block;
+}
+
+.touch-button:active {
+  background: rgba(255, 201, 74, 0.3);
+}
+
+/* ---------- Big messages ---------- */
+
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26%;
+  z-index: 12;
+  padding: 0 1rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.6rem, 5vw, 3.2rem);
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 0 24px var(--cyan), 0 4px 0 rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.banner.is-on {
+  animation: banner 2.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.banner.is-gold {
+  color: var(--gold);
+  text-shadow: 0 0 28px rgba(255, 201, 74, 0.9), 0 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.banner.is-red {
+  color: #ff6a5e;
+  text-shadow: 0 0 28px #ff3b30, 0 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.banner.is-cyan {
+  color: #dffbff;
+  text-shadow: 0 0 30px var(--cyan), 0 0 60px var(--cyan);
+}
+
+@keyframes banner {
+  0% {
+    opacity: 0;
+    transform: scale(2.2);
+    letter-spacing: 0.4em;
+    filter: blur(8px);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+    letter-spacing: 0.08em;
+    filter: none;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+/* messages from the suit's computer */
+.comms {
+  position: absolute;
+  left: 50%;
+  bottom: 6.5rem;
+  z-index: 12;
+  max-width: min(560px, calc(100% - 2rem));
+  margin: 0;
+  padding: 0.5rem 1rem;
+  translate: -50% 0;
+  border-left: 3px solid var(--cyan);
+  border-radius: 4px;
+  background: rgba(5, 12, 30, 0.75);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.comms::before {
+  content: "SUIT AI › ";
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+}
+
+.comms.is-on {
+  animation: comms 4s ease forwards;
+}
+
+@keyframes comms {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.zone-warning {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  z-index: 12;
+  translate: -50% 0;
+  padding: 0.4rem 1rem;
+  border: 2px solid var(--red-hot);
+  border-radius: 8px;
+  background: rgba(60, 5, 5, 0.6);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  color: #fff;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zone-warning.is-on {
+  opacity: 1;
+  animation: urgent-bar 0.4s ease-in-out infinite alternate;
+}
+
+/* ---------- 3-2-1-GO! ---------- */
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  display: none;
+  place-items: center;
+  pointer-events: none;
+}
+
+.countdown.is-on {
+  display: grid;
+}
+
+.countdown span {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(5rem, 18vw, 10rem);
+  color: #fff;
+  text-shadow: 0 0 40px var(--cyan), 0 0 90px var(--cyan);
+}
+
+.countdown span.pop {
+  animation: count-pop 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+}
+
+@keyframes count-pop {
+  from {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+/* ---------- Menus: start, pause, mission report ---------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  place-items: center;
+  padding: 4.5rem 1rem 1rem;
+  overflow-y: auto;
+  background: radial-gradient(circle, rgba(5, 7, 15, 0.2), rgba(5, 7, 15, 0.75));
+}
+
+/* on wide screens the start menu sits on the left, next to the suit on the tower */
+.start-screen {
+  background: linear-gradient(90deg, rgba(5, 7, 15, 0.8), rgba(5, 7, 15, 0.15) 60%, transparent);
+}
+
+@media (min-width: 900px) {
+  .start-screen {
+    justify-items: start;
+    padding-left: clamp(2rem, 6vw, 6rem);
+  }
+}
+
+.overlay-box {
+  max-width: 560px;
+  text-align: center;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: overlay-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+@keyframes overlay-in {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+
+.intro .start-screen .overlay-box {
+  animation: overlay-in 0.7s 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+.overlay-box h1 {
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.start-screen .kicker {
+  min-height: 1.2em;
+}
+
+.badge-3d {
+  display: inline-block;
+  padding: 0.05em 0.3em;
+  border: 3px solid var(--cyan);
+  border-radius: 10px;
+  font-size: 0.55em;
+  vertical-align: 0.3em;
+  color: var(--cyan);
+  text-shadow: 0 0 14px var(--cyan);
+  box-shadow: 0 0 18px rgba(94, 231, 255, 0.5), inset 0 0 12px rgba(94, 231, 255, 0.4);
+  animation: badge-spin 4s ease-in-out infinite;
+}
+
+@keyframes badge-spin {
+  0%,
+  70% {
+    transform: perspective(200px) rotateY(0deg);
+  }
+  85% {
+    transform: perspective(200px) rotateY(180deg);
+  }
+  100% {
+    transform: perspective(200px) rotateY(360deg);
+  }
+}
+
+.start-text {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.how-to {
+  margin: 0 auto 1.4rem;
+  padding: 0.8rem 1rem;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(5, 7, 15, 0.5);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.how-to b {
+  color: var(--text);
+}
+
+.how-to b.gold {
+  color: var(--gold);
+}
+
+#start-button {
+  font-size: 1.15rem;
+  padding: 1em 2.6em;
+}
+
+.best-line {
+  margin: 1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+.best-line span {
+  color: var(--gold);
+}
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.report-stats div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(5, 7, 15, 0.5);
+  animation: overlay-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+.report-stats div:nth-child(2) { animation-delay: 0.08s; }
+.report-stats div:nth-child(3) { animation-delay: 0.16s; }
+.report-stats div:nth-child(4) { animation-delay: 0.24s; }
+
+.report-stats span {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+}
+
+.report-stats b {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: var(--gold);
+}
+
+.report-best {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+
+.report-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 700px) {
+  .hud {
+    padding: 0.5rem;
+  }
+
+  .hud-box {
+    min-width: 58px;
+    padding: 0 0.3rem;
+  }
+
+  .hud-value {
+    font-size: 1.05rem;
+  }
+
+  .boss-bar {
+    position: absolute;
+    top: 4.2rem;
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+
+  .radar {
+    width: 92px;
+    height: 92px;
+  }
+
+  .meters {
+    width: 130px;
+    padding: 0.45rem 0.6rem;
+  }
+
+  .hud-bottom {
+    flex-wrap: wrap;
+  }
+
+  .hud-right {
+    gap: 0.4rem;
+  }
+
+  .beam-button {
+    width: 108px;
+    height: 58px;
+  }
+
+  .beam-text {
+    font-size: 0.6rem;
+  }
+
+  .touch-button {
+    width: 58px;
+    height: 58px;
+  }
+
+  /* on phones the bottom is full of meters and buttons, so messages go near the top */
+  .comms {
+    top: calc(var(--vh) * 4.5 + 4.4rem);
+    bottom: auto;
+    font-size: 0.95rem;
+  }
+
+  .report-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Helmet view: looking out through the visor ----------
+   Shown once the camera has flown into the helmet (body.in-helmet, set by iron3d.ts). The frame is
+   kept thin so it never hides much of the view; the helmet feel comes from the curved edges, the soft
+   shadow, the glass glare and the HUD panels angled like they're projected on curved glass. */
+
+.visor {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.in-helmet[data-phase="playing"] .visor,
+.in-helmet[data-phase="paused"] .visor {
+  display: block;
+  animation: visor-on 0.9s ease-out;
+}
+
+.visor svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.visor-frame {
+  fill: rgba(9, 5, 10, 0.94);
+}
+
+/* soft shadow just inside the visor edge */
+.visor-shade {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.7);
+  stroke-width: 34;
+}
+
+.visor-edge {
+  fill: none;
+  stroke: rgba(94, 231, 255, 0.55);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px var(--cyan));
+}
+
+/* low armor: the visor edge pulses red */
+.armor-low .visor-edge {
+  stroke: rgba(255, 59, 48, 0.9);
+  filter: drop-shadow(0 0 6px var(--red-hot));
+  animation: urgent-bar 0.5s ease-in-out infinite alternate;
+}
+
+/* the glass: a faint glare in the top corner and very light scanlines */
+.visor-glass {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.07), transparent 22%),
+    radial-gradient(ellipse at 50% 120%, rgba(94, 231, 255, 0.08), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(94, 231, 255, 0.025) 0 1px, transparent 1px 3px);
+}
+
+/* the visor powering on as the camera arrives in the helmet */
+@keyframes visor-on {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.4;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* keep the HUD inside the visor, and angle the side panels like curved glass */
+.in-helmet .hud {
+  padding: calc(var(--vh) * 4.5) 4.5% calc(var(--vh) * 6);
+}
+
+.in-helmet .hud-top > .hud-boxes,
+.in-helmet .hud-left {
+  transform: perspective(900px) rotateY(16deg);
+  transform-origin: left center;
+}
+
+.in-helmet .hud-top > .hud-buttons,
+.in-helmet .hud-right {
+  transform: perspective(900px) rotateY(-16deg);
+  transform-origin: right center;
+}
+
+.in-helmet .combo {
+  top: calc(var(--vh) * 4.5 + 4.5rem);
+  left: 5.5%;
+}
